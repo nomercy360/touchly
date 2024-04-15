@@ -12,7 +12,7 @@ import (
 // @Accept       json
 // @Produce      json
 // @Success      200  {object}   []db.Tag
-// @Router       /tags [get]
+// @Router       /api/tags [get]
 func (tr *transport) ListTagsHandler(w http.ResponseWriter, r *http.Request) {
 	tags, err := tr.api.ListTags()
 
@@ -32,7 +32,8 @@ func (tr *transport) ListTagsHandler(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Param        tag body db.Tag true "tag"
 // @Success      201  {object}   db.Tag
-// @Router       /tags [post]
+// @Security     JWT
+// @Router       /api/tags [post]
 func (tr *transport) CreateTagHandler(w http.ResponseWriter, r *http.Request) {
 	var tag db.Tag
 	if err := decodeRequest(r, &tag); err != nil {
@@ -57,7 +58,8 @@ func (tr *transport) CreateTagHandler(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Param        id path int true "tag id"
 // @Success      200  {object}   nil
-// @Router       /tags/{id} [delete]
+// @Security     JWT
+// @Router       /api/tags/{id} [delete]
 func (tr *transport) DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := getIDFromRequest(r)
 	if err != nil {

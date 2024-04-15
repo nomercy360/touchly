@@ -22,7 +22,7 @@ type LoginUserRequest struct {
 // @Produce      json
 // @Param        login body LoginUserRequest true "login"
 // @Success      200  {object}   map[string]string
-// @Router       /login [post]
+// @Router       /api/login [post]
 func (tr *transport) LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 	var req LoginUserRequest
 
@@ -42,7 +42,7 @@ func (tr *transport) LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 
 type VerifyOTPRequest struct {
 	Email string `json:"email"`
-	Code  string `json:"code"`
+	OTP   string `json:"otp"`
 }
 
 // VerifyOTPHandler godoc
@@ -53,7 +53,7 @@ type VerifyOTPRequest struct {
 // @Produce      json
 // @Param 	     verify body VerifyOTPRequest true "verify"
 // @Success      200  {object}   nil
-// @Router       /otp/verify [post]
+// @Router       /api/otp-verify [post]
 func (tr *transport) VerifyOTPHandler(w http.ResponseWriter, r *http.Request) {
 	var req VerifyOTPRequest
 
@@ -62,7 +62,7 @@ func (tr *transport) VerifyOTPHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := tr.api.VerifyOTP(req.Email, req.Code)
+	err := tr.api.VerifyOTP(req.Email, req.OTP)
 	if err != nil {
 		_ = WriteError(w, http.StatusUnauthorized, err.Error())
 		return
@@ -83,7 +83,7 @@ type SendOTPRequest struct {
 // @Produce      json
 // @Param        email body SendOTPRequest true "email"
 // @Success      200  {object}   nil
-// @Router       /otp [post]
+// @Router       /api/otp [post]
 func (tr *transport) SendOTPHandler(w http.ResponseWriter, r *http.Request) {
 	var req SendOTPRequest
 
@@ -98,7 +98,7 @@ func (tr *transport) SendOTPHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, nil)
+	_ = WriteJSON(w, http.StatusOK, map[string]string{"message": "OK"})
 }
 
 type SetPasswordRequest struct {
@@ -114,7 +114,7 @@ type SetPasswordRequest struct {
 // @Produce      json
 // @Param        password body SetPasswordRequest true "password"
 // @Success      200  {object}   nil
-// @Router       /password [post]
+// @Router       /api/set-password [post]
 func (tr *transport) SetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	var req SetPasswordRequest
 
@@ -129,7 +129,7 @@ func (tr *transport) SetPasswordHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, nil)
+	_ = WriteJSON(w, http.StatusOK, map[string]string{"message": "OK"})
 }
 
 // GetMeHandler godoc
@@ -139,7 +139,8 @@ func (tr *transport) SetPasswordHandler(w http.ResponseWriter, r *http.Request) 
 // @Accept       json
 // @Produce      json
 // @Success      200  {object}   db.User
-// @Router       /me [get]
+// @Security     JWT
+// @Router       /api/me [get]
 func (tr *transport) GetMeHandler(w http.ResponseWriter, r *http.Request) {
 	userID := getUserIDFromRequest(r)
 

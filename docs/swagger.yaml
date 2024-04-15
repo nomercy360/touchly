@@ -1,12 +1,33 @@
 definitions:
+  db.Address:
+    properties:
+      contact_id:
+        type: integer
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      external_id:
+        type: string
+      id:
+        type: integer
+      label:
+        type: string
+      location:
+        $ref: '#/definitions/db.Point'
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
   db.Contact:
     properties:
       about:
         type: string
-      activity:
+      activity_name:
         type: string
       address:
-        type: string
+        $ref: '#/definitions/db.Address'
       avatar:
         type: string
       created_at:
@@ -15,11 +36,11 @@ definitions:
         type: string
       email:
         type: string
-      full_name:
-        type: string
       id:
         type: integer
       name:
+        type: string
+      phone_calling_code:
         type: string
       phone_number:
         type: string
@@ -42,12 +63,23 @@ definitions:
     type: object
   db.Link:
     properties:
+      contact_id:
+        type: integer
       id:
         type: integer
+      label:
+        type: string
       link:
         type: string
       type:
         type: string
+    type: object
+  db.Point:
+    properties:
+      lat:
+        type: number
+      lng:
+        type: number
     type: object
   db.Tag:
     properties:
@@ -56,11 +88,31 @@ definitions:
       name:
         type: string
     type: object
+  db.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
   transport.DeleteSavedContactRequest:
     properties:
       contact_id:
         example: 1
         type: integer
+    type: object
+  transport.LoginUserRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
     type: object
   transport.SaveContactRequest:
     properties:
@@ -68,23 +120,36 @@ definitions:
         example: 1
         type: integer
     type: object
+  transport.SendOTPRequest:
+    properties:
+      email:
+        type: string
+    type: object
+  transport.SetPasswordRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  transport.VerifyOTPRequest:
+    properties:
+      email:
+        type: string
+      otp:
+        type: string
+    type: object
 info:
   contact: { }
   description: API Documentation for the Touchly Backend
   title: Touchly API
   version: "1.0"
 paths:
-  /contacts:
+  /api/contacts:
     get:
       consumes:
         - application/json
       description: get contacts
-      parameters:
-        - description: name search by q
-          format: email
-          in: query
-          name: q
-          type: string
       produces:
         - application/json
       responses:
@@ -115,10 +180,12 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/db.Contact'
+      security:
+        - JWT: [ ]
       summary: Create contact
       tags:
         - contacts
-  /contacts/{id}:
+  /api/contacts/{id}:
     delete:
       consumes:
         - application/json
@@ -134,6 +201,8 @@ paths:
       responses:
         "200":
           description: OK
+      security:
+        - JWT: [ ]
       summary: Delete contact
       tags:
         - contacts
@@ -172,10 +241,12 @@ paths:
       responses:
         "200":
           description: OK
+      security:
+        - JWT: [ ]
       summary: Update contact
       tags:
         - contacts
-  /contacts/{id}/save:
+  /api/contacts/{id}/save:
     post:
       consumes:
         - application/json
@@ -197,10 +268,12 @@ paths:
       responses:
         "200":
           description: OK
+      security:
+        - JWT: [ ]
       summary: Save contact
       tags:
         - contacts
-  /contacts/{id}/saved:
+  /api/contacts/{id}/saved:
     delete:
       consumes:
         - application/json
@@ -222,6 +295,8 @@ paths:
       responses:
         "200":
           description: OK
+      security:
+        - JWT: [ ]
       summary: Delete saved contact
       tags:
         - contacts
@@ -244,9 +319,173 @@ paths:
             items:
               $ref: '#/definitions/db.Contact'
             type: array
+      security:
+        - JWT: [ ]
       summary: List contacts saved by user
       tags:
         - contacts
+  /api/login:
+    post:
+      consumes:
+        - application/json
+      description: login user
+      parameters:
+        - description: login
+          in: body
+          name: login
+          required: true
+          schema:
+            $ref: '#/definitions/transport.LoginUserRequest'
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login user
+      tags:
+        - users
+  /api/me:
+    get:
+      consumes:
+        - application/json
+      description: get user
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/db.User'
+      security:
+        - JWT: [ ]
+      summary: Get user
+      tags:
+        - users
+  /api/otp:
+    post:
+      consumes:
+        - application/json
+      description: send OTP
+      parameters:
+        - description: email
+          in: body
+          name: email
+          required: true
+          schema:
+            $ref: '#/definitions/transport.SendOTPRequest'
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+      summary: Send OTP
+      tags:
+        - users
+  /api/otp-verify:
+    post:
+      consumes:
+        - application/json
+      description: verify OTP
+      parameters:
+        - description: verify
+          in: body
+          name: verify
+          required: true
+          schema:
+            $ref: '#/definitions/transport.VerifyOTPRequest'
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+      summary: Verify OTP
+      tags:
+        - users
+  /api/set-password:
+    post:
+      consumes:
+        - application/json
+      description: set password
+      parameters:
+        - description: password
+          in: body
+          name: password
+          required: true
+          schema:
+            $ref: '#/definitions/transport.SetPasswordRequest'
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+      summary: Set password
+      tags:
+        - users
+  /api/tags:
+    get:
+      consumes:
+        - application/json
+      description: list tags
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/db.Tag'
+            type: array
+      summary: List tags
+      tags:
+        - tags
+    post:
+      consumes:
+        - application/json
+      description: create tag
+      parameters:
+        - description: tag
+          in: body
+          name: tag
+          required: true
+          schema:
+            $ref: '#/definitions/db.Tag'
+      produces:
+        - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/db.Tag'
+      security:
+        - JWT: [ ]
+      summary: Create tag
+      tags:
+        - tags
+  /api/tags/{id}:
+    delete:
+      consumes:
+        - application/json
+      description: delete tag
+      parameters:
+        - description: tag id
+          in: path
+          name: id
+          required: true
+          type: integer
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+        - JWT: [ ]
+      summary: Delete tag
+      tags:
+        - tags
 securityDefinitions:
   JWT:
     description: This API uses JWT Bearer token. You can get one at /auth

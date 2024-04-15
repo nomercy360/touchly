@@ -61,8 +61,14 @@ func (s *storage) UpdateUserPassword(email, password string) error {
 		WHERE email = $2
 	`
 
-	if _, err := s.pg.Exec(query, password, email); err != nil {
+	res, err := s.pg.Exec(query, password, email)
+
+	if err != nil {
 		return err
+	}
+
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		return ErrNotFound
 	}
 
 	return nil

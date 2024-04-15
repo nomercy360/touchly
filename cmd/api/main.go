@@ -82,7 +82,7 @@ func main() {
 	app := transport.New(api, config.JWTSecret)
 
 	r.Get("/swagger/*", httpSwagger.Handler(
-		httpSwagger.URL("http://localhost:8080/swagger/doc.json"), //The url pointing to API definition"
+		httpSwagger.URL("/swagger/doc.json"), //The url pointing to API definition"
 	))
 
 	app.RegisterRoutes(r)

@@ -81,27 +81,31 @@ func (tr *transport) RegisterRoutes(r chi.Router) {
 func ApiRoutes(tr *transport) http.Handler {
 	r := chi.NewRouter()
 
-	// r.Use(WithAuth("secret"))
-
 	r.Post("/login", tr.LoginUserHandler)
 	r.Post("/otp", tr.SendOTPHandler)
-	r.Post("/otp/verify", tr.VerifyOTPHandler)
-	r.Post("/password", tr.SetPasswordHandler)
+	r.Post("/otp-verify", tr.VerifyOTPHandler)
+	r.Post("/set-password", tr.SetPasswordHandler)
 
-	r.Get("/me", tr.GetMeHandler)
 	r.Get("/contacts", tr.ListContactsHandler)
-	r.Post("/contacts", tr.CreateContactHandler)
 	r.Get("/contacts/{id}", tr.GetContactHandler)
 
 	r.Get("/tags", tr.ListTagsHandler)
-	r.Post("/tags", tr.CreateTagHandler)
-	r.Delete("/tags/{id}", tr.DeleteTagHandler)
 
-	r.Get("/contacts/saved", tr.ListSavedContactsHandler)
-	r.Post("/contacts/{id}/save", tr.SaveContactHandler)
-	r.Delete("/contacts/{id}/save", tr.DeleteSavedContactHandler)
+	r.Group(func(r chi.Router) {
+		r.Use(WithAuth("secret"))
 
-	r.Get("/address", tr.ListAddressesHandler)
+		r.Get("/me", tr.GetMeHandler)
+		r.Post("/contacts", tr.CreateContactHandler)
+
+		r.Post("/tags", tr.CreateTagHandler)
+		r.Delete("/tags/{id}", tr.DeleteTagHandler)
+
+		r.Get("/contacts/saved", tr.ListSavedContactsHandler)
+		r.Post("/contacts/{id}/save", tr.SaveContactHandler)
+		r.Delete("/contacts/{id}/save", tr.DeleteSavedContactHandler)
+
+		r.Get("/address", tr.ListAddressesHandler)
+	})
 
 	return r
 }

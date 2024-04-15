@@ -60,11 +60,32 @@ func (api *api) LoginUser(email, password string) (*string, error) {
 	}
 }
 
+var (
+	ErrorInvalidRequest = errors.New("invalid request")
+	ErrorUserNotFound   = errors.New("user not found")
+)
+
 func (api *api) SendOTP(email string) error {
+	if email == "" {
+		return ErrorInvalidRequest
+	}
+
 	user, err := api.storage.GetUserByEmail(email)
 
 	if err != nil {
-		return err
+		if errors.As(err, &db.ErrNotFound) {
+			u := db.User{
+				Email:         email,
+				EmailVerified: false,
+			}
+
+			if user, err = api.storage.CreateUser(u); err != nil {
+				return err
+			}
+
+		} else {
+			return err
+		}
 	}
 
 	// Generate OTP (implement your own logic for OTP generation)
@@ -79,15 +100,11 @@ func (api *api) SendOTP(email string) error {
 		ExpiresAt: expiresAt,
 	}
 
-	_, err = api.storage.CreateOTP(otp)
-
-	if err != nil {
+	if _, err := api.storage.CreateOTP(otp); err != nil {
 		return err
 	}
 
-	err = api.SendOTPEmail(email, otpCode)
-
-	if err != nil {
+	if err := api.SendOTPEmail(email, otpCode); err != nil {
 		return err
 	}
 
@@ -130,6 +147,10 @@ func (api *api) SendOTPEmail(recipientEmail, otpCode string) error {
 }
 
 func (api *api) VerifyOTP(email, otpCode string) error {
+	if email == "" || otpCode == "" {
+		return ErrorInvalidRequest
+	}
+
 	user, err := api.storage.GetUserByEmail(email)
 
 	if err != nil {
@@ -140,6 +161,10 @@ func (api *api) VerifyOTP(email, otpCode string) error {
 
 	if err != nil {
 		return err
+	}
+
+	if otp.IsUsed {
+		return errors.New("OTP is already used")
 	}
 
 	if err := api.storage.SetOTPIsUsed(otp.ID); err != nil {
@@ -163,11 +188,7 @@ func hashPassword(password string) (string, error) {
 
 func (api *api) SetPassword(email, password string) error {
 	if email == "" || password == "" {
-		return errors.New("invalid request")
-	}
-
-	if _, err := api.storage.GetUserByEmail(email); err != nil {
-		return err
+		return ErrorInvalidRequest
 	}
 
 	hashedPassword, err := hashPassword(password)

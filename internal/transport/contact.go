@@ -21,7 +21,7 @@ func getIDFromRequest(r *http.Request) (int64, error) {
 func getUserIDFromRequest(r *http.Request) int64 {
 	ctx := r.Context()
 
-	return ctx.Value("user_id").(int64)
+	return ctx.Value("userID").(int64)
 }
 
 // CreateContactHandler godoc
@@ -32,7 +32,8 @@ func getUserIDFromRequest(r *http.Request) int64 {
 // @Produce      json
 // @Param        contact   body     db.Contact     true  "contact"
 // @Success      201  {object}   db.Contact
-// @Router       /contacts [post]
+// @Security     JWT
+// @Router       /api/contacts [post]
 func (tr *transport) CreateContactHandler(w http.ResponseWriter, r *http.Request) {
 	var contact db.Contact
 	if err := decodeRequest(r, &contact); err != nil {
@@ -59,7 +60,7 @@ func (tr *transport) CreateContactHandler(w http.ResponseWriter, r *http.Request
 // @Produce      json
 // @Param        id   path     int     true  "contact id"
 // @Success      200  {object}   db.Contact
-// @Router       /contacts/{id} [get]
+// @Router       /api/contacts/{id} [get]
 func (tr *transport) GetContactHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := getIDFromRequest(r)
 	if err != nil {
@@ -90,7 +91,8 @@ func (tr *transport) GetContactHandler(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Param        id   path     int     true  "contact id"
 // @Success      200  {object}   nil
-// @Router       /contacts/{id} [put]
+// @Security     JWT
+// @Router       /api/contacts/{id} [put]
 func (tr *transport) UpdateContactHandler(w http.ResponseWriter, r *http.Request) {
 	var contact db.Contact
 	if err := decodeRequest(r, &contact); err != nil {
@@ -117,7 +119,8 @@ func (tr *transport) UpdateContactHandler(w http.ResponseWriter, r *http.Request
 // @Produce      json
 // @Param        id   path     int     true  "contact id"
 // @Success      200  {object}   nil
-// @Router       /contacts/{id} [delete]
+// @Security     JWT
+// @Router       /api/contacts/{id} [delete]
 func (tr *transport) DeleteContactHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := getIDFromRequest(r)
 	if err != nil {
@@ -142,9 +145,8 @@ func (tr *transport) DeleteContactHandler(w http.ResponseWriter, r *http.Request
 // @Tags         contacts
 // @Accept       json
 // @Produce      json
-// @Param        q    query     string  false  "name search by q"  Format(email)
 // @Success      200  {array}   db.Contact
-// @Router       /contacts [get]
+// @Router       /api/contacts [get]
 func (tr *transport) ListContactsHandler(w http.ResponseWriter, r *http.Request) {
 	contacts, err := tr.api.ListContacts()
 
@@ -164,7 +166,8 @@ func (tr *transport) ListContactsHandler(w http.ResponseWriter, r *http.Request)
 // @Produce      json
 // @Param        id   path     int     true  "user id"
 // @Success      200  {array}   db.Contact
-// @Router       /contacts/{id}/saved [get]
+// @Security     JWT
+// @Router       /api/contacts/{id}/saved [get]
 func (tr *transport) ListSavedContactsHandler(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
@@ -194,7 +197,8 @@ type SaveContactRequest struct {
 // @Param        id   path     int     true  "user id"
 // @Param		 account	   body	   transport.SaveContactRequest	true	"contact id to save"
 // @Success      200  {object}   nil
-// @Router       /contacts/{id}/save [post]
+// @Security     JWT
+// @Router       /api/contacts/{id}/save [post]
 func (tr *transport) SaveContactHandler(w http.ResponseWriter, r *http.Request) {
 	var data SaveContactRequest
 
@@ -225,11 +229,10 @@ type DeleteSavedContactRequest struct {
 // @Accept       json
 // @Produce      json
 // @Param        id   path     int     true  "user id"
-//
-//	@Param		 account	   body	   transport.DeleteSavedContactRequest	true	"contact id to delete"
-//
+// @Param		 account	   body	   transport.DeleteSavedContactRequest	true	"contact id to delete"
 // @Success      200  {object}   nil
-// @Router       /contacts/{id}/saved [delete]
+// @Security     JWT
+// @Router       /api/contacts/{id}/saved [delete]
 func (tr *transport) DeleteSavedContactHandler(w http.ResponseWriter, r *http.Request) {
 	var data DeleteSavedContactRequest
 
