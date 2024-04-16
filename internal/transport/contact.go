@@ -5,6 +5,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
+	"strings"
 	"touchly/internal/db"
 )
 
@@ -139,16 +140,50 @@ func (tr *transport) DeleteContactHandler(w http.ResponseWriter, r *http.Request
 	_ = WriteJSON(w, http.StatusOK, nil)
 }
 
+func queryToIntArray(query string) ([]int, error) {
+	if query == "" {
+		return nil, nil
+	}
+
+	queryArray := strings.Split(query, ",")
+
+	var intArray []int
+
+	for _, q := range queryArray {
+		i, err := strconv.Atoi(q)
+		if err != nil {
+			return nil, err
+		}
+
+		intArray = append(intArray, i)
+	}
+
+	return intArray, nil
+}
+
 // ListContactsHandler godoc
 // @Summary      List contacts
 // @Description  get contacts
 // @Tags         contacts
 // @Accept       json
 // @Produce      json
-// @Success      200  {array}   db.Contact
+// @Success      200  {object} db.ContactsPage
+// @Param        page      query    int     false  "page number"
+// @Param        page_size query    int     false  "page size"
+// @Param		 search    query    string  false  "search query"
+// @Param		 tag       query    []int   false  "tag id"
 // @Router       /api/contacts [get]
 func (tr *transport) ListContactsHandler(w http.ResponseWriter, r *http.Request) {
-	contacts, err := tr.api.ListContacts()
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+
+	search := r.URL.Query().Get("search")
+
+	tags := r.URL.Query().Get("tag")
+
+	tagIDs, _ := queryToIntArray(tags)
+
+	contacts, err := tr.api.ListContacts(tagIDs, search, page, pageSize)
 
 	if err != nil {
 		_ = WriteError(w, http.StatusInternalServerError, err.Error())
@@ -167,15 +202,12 @@ func (tr *transport) ListContactsHandler(w http.ResponseWriter, r *http.Request)
 // @Param        id   path     int     true  "user id"
 // @Success      200  {array}   db.Contact
 // @Security     JWT
-// @Router       /api/contacts/{id}/saved [get]
+// @Router       /api/contacts/saved [get]
 func (tr *transport) ListSavedContactsHandler(w http.ResponseWriter, r *http.Request) {
-	userID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
-	if err != nil {
-		_ = WriteError(w, http.StatusBadRequest, err.Error())
-		return
-	}
+	userID := getUserIDFromRequest(r)
 
 	contacts, err := tr.api.ListSavedContacts(userID)
+
 	if err != nil {
 		_ = WriteError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -250,15 +282,4 @@ func (tr *transport) DeleteSavedContactHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	_ = WriteJSON(w, http.StatusOK, nil)
-}
-
-func (tr *transport) ListAddressesHandler(w http.ResponseWriter, r *http.Request) {
-	addresses, err := tr.api.ListAddresses()
-
-	if err != nil {
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	_ = WriteJSON(w, http.StatusOK, addresses)
 }

@@ -1,774 +1,823 @@
 {
-  "swagger": "2.0",
-  "info": {
-    "description": "API Documentation for the Touchly Backend",
-    "title": "Touchly API",
-    "contact": {},
-    "version": "1.0"
-  },
-  "paths": {
-    "/api/contacts": {
-      "get": {
-        "description": "get contacts",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "contacts"
-        ],
-        "summary": "List contacts",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/db.Contact"
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "security": [
-          {
-            "JWT": []
-          }
-        ],
-        "description": "create contact",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "contacts"
-        ],
-        "summary": "Create contact",
-        "parameters": [
-          {
-            "description": "contact",
-            "name": "contact",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/db.Contact"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Created",
-            "schema": {
-              "$ref": "#/definitions/db.Contact"
-            }
-          }
-        }
-      }
+    "swagger": "2.0",
+    "info": {
+        "description": "API Documentation for the Touchly Backend",
+        "title": "Touchly API",
+        "contact": {},
+        "version": "1.0"
     },
-    "/api/contacts/{id}": {
-      "get": {
-        "description": "get contact",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "contacts"
-        ],
-        "summary": "Get contact",
-        "parameters": [
-          {
-            "type": "integer",
-            "description": "contact id",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/db.Contact"
+    "paths": {
+        "/api/contacts": {
+            "get": {
+                "description": "get contacts",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contacts"
+                ],
+                "summary": "List contacts",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page size",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "search query",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "tag id",
+                        "name": "tag",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/db.ContactsPage"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "create contact",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contacts"
+                ],
+                "summary": "Create contact",
+                "parameters": [
+                    {
+                        "description": "contact",
+                        "name": "contact",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/db.Contact"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/db.Contact"
+                        }
+                    }
+                }
             }
-          }
+        },
+        "/api/contacts/saved": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "get saved contacts",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contacts"
+                ],
+                "summary": "List contacts saved by user",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "user id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.Contact"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/contacts/{id}": {
+            "get": {
+                "description": "get contact",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contacts"
+                ],
+                "summary": "Get contact",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "contact id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/db.Contact"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "update contact",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contacts"
+                ],
+                "summary": "Update contact",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "contact id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "delete contact",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contacts"
+                ],
+                "summary": "Delete contact",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "contact id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/contacts/{id}/save": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "save contact",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contacts"
+                ],
+                "summary": "Save contact",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "user id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "contact id to save",
+                        "name": "account",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transport.SaveContactRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/contacts/{id}/saved": {
+            "delete": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "delete saved contact",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contacts"
+                ],
+                "summary": "Delete saved contact",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "user id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "contact id to delete",
+                        "name": "account",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transport.DeleteSavedContactRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/login": {
+            "post": {
+                "description": "login user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Login user",
+                "parameters": [
+                    {
+                        "description": "login",
+                        "name": "login",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transport.LoginUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/me": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "get user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/db.User"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/otp": {
+            "post": {
+                "description": "send OTP",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Send OTP",
+                "parameters": [
+                    {
+                        "description": "email",
+                        "name": "email",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transport.SendOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/otp-verify": {
+            "post": {
+                "description": "verify OTP",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Verify OTP",
+                "parameters": [
+                    {
+                        "description": "verify",
+                        "name": "verify",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transport.VerifyOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/set-password": {
+            "post": {
+                "description": "set password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Set password",
+                "parameters": [
+                    {
+                        "description": "password",
+                        "name": "password",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transport.SetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/tags": {
+            "get": {
+                "description": "list tags",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "List tags",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.Tag"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "create tag",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Create tag",
+                "parameters": [
+                    {
+                        "description": "tag",
+                        "name": "tag",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/db.Tag"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/db.Tag"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/tags/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "delete tag",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Delete tag",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "tag id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
         }
-      },
-      "put": {
-        "security": [
-          {
-            "JWT": []
-          }
-        ],
-        "description": "update contact",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "contacts"
-        ],
-        "summary": "Update contact",
-        "parameters": [
-          {
-            "type": "integer",
-            "description": "contact id",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      },
-      "delete": {
-        "security": [
-          {
-            "JWT": []
-          }
-        ],
-        "description": "delete contact",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "contacts"
-        ],
-        "summary": "Delete contact",
-        "parameters": [
-          {
-            "type": "integer",
-            "description": "contact id",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
     },
-    "/api/contacts/{id}/save": {
-      "post": {
-        "security": [
-          {
-            "JWT": []
-          }
-        ],
-        "description": "save contact",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "contacts"
-        ],
-        "summary": "Save contact",
-        "parameters": [
-          {
-            "type": "integer",
-            "description": "user id",
-            "name": "id",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "contact id to save",
-            "name": "account",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/transport.SaveContactRequest"
+    "definitions": {
+        "db.Address": {
+            "type": "object",
+            "properties": {
+                "contact_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "external_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "location": {
+                    "$ref": "#/definitions/db.Point"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
             }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
+        },
+        "db.Contact": {
+            "type": "object",
+            "properties": {
+                "about": {
+                    "type": "string"
+                },
+                "activity_name": {
+                    "type": "string"
+                },
+                "address": {
+                    "$ref": "#/definitions/db.Address"
+                },
+                "avatar": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone_calling_code": {
+                    "type": "string"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "saves_amount": {
+                    "type": "integer"
+                },
+                "social_links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.Link"
+                    }
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.Tag"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "views_amount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "db.ContactsPage": {
+            "type": "object",
+            "properties": {
+                "contacts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.Contact"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "db.Link": {
+            "type": "object",
+            "properties": {
+                "contact_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "link": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.Point": {
+            "type": "object",
+            "properties": {
+                "lat": {
+                    "type": "number"
+                },
+                "lng": {
+                    "type": "number"
+                }
+            }
+        },
+        "db.Tag": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.User": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "email_verified": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "transport.DeleteSavedContactRequest": {
+            "type": "object",
+            "properties": {
+                "contact_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "transport.LoginUserRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "transport.SaveContactRequest": {
+            "type": "object",
+            "properties": {
+                "contact_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "transport.SendOTPRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "transport.SetPasswordRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "transport.VerifyOTPRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "otp": {
+                    "type": "string"
+                }
+            }
         }
-      }
     },
-    "/api/contacts/{id}/saved": {
-      "get": {
-        "security": [
-          {
-            "JWT": []
-          }
-        ],
-        "description": "get saved contacts",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "contacts"
-        ],
-        "summary": "List contacts saved by user",
-        "parameters": [
-          {
-            "type": "integer",
-            "description": "user id",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/db.Contact"
-              }
-            }
-          }
+    "securityDefinitions": {
+        "JWT": {
+            "description": "This API uses JWT Bearer token. You can get one at /auth",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
-      },
-      "delete": {
-        "security": [
-          {
-            "JWT": []
-          }
-        ],
-        "description": "delete saved contact",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "contacts"
-        ],
-        "summary": "Delete saved contact",
-        "parameters": [
-          {
-            "type": "integer",
-            "description": "user id",
-            "name": "id",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "contact id to delete",
-            "name": "account",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/transport.DeleteSavedContactRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/login": {
-      "post": {
-        "description": "login user",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "users"
-        ],
-        "summary": "Login user",
-        "parameters": [
-          {
-            "description": "login",
-            "name": "login",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/transport.LoginUserRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/me": {
-      "get": {
-        "security": [
-          {
-            "JWT": []
-          }
-        ],
-        "description": "get user",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "users"
-        ],
-        "summary": "Get user",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/db.User"
-            }
-          }
-        }
-      }
-    },
-    "/api/otp": {
-      "post": {
-        "description": "send OTP",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "users"
-        ],
-        "summary": "Send OTP",
-        "parameters": [
-          {
-            "description": "email",
-            "name": "email",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/transport.SendOTPRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/otp-verify": {
-      "post": {
-        "description": "verify OTP",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "users"
-        ],
-        "summary": "Verify OTP",
-        "parameters": [
-          {
-            "description": "verify",
-            "name": "verify",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/transport.VerifyOTPRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/set-password": {
-      "post": {
-        "description": "set password",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "users"
-        ],
-        "summary": "Set password",
-        "parameters": [
-          {
-            "description": "password",
-            "name": "password",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/transport.SetPasswordRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/tags": {
-      "get": {
-        "description": "list tags",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "tags"
-        ],
-        "summary": "List tags",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/db.Tag"
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "security": [
-          {
-            "JWT": []
-          }
-        ],
-        "description": "create tag",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "tags"
-        ],
-        "summary": "Create tag",
-        "parameters": [
-          {
-            "description": "tag",
-            "name": "tag",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/db.Tag"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Created",
-            "schema": {
-              "$ref": "#/definitions/db.Tag"
-            }
-          }
-        }
-      }
-    },
-    "/api/tags/{id}": {
-      "delete": {
-        "security": [
-          {
-            "JWT": []
-          }
-        ],
-        "description": "delete tag",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "tags"
-        ],
-        "summary": "Delete tag",
-        "parameters": [
-          {
-            "type": "integer",
-            "description": "tag id",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
     }
-  },
-  "definitions": {
-    "db.Address": {
-      "type": "object",
-      "properties": {
-        "contact_id": {
-          "type": "integer"
-        },
-        "created_at": {
-          "type": "string"
-        },
-        "deleted_at": {
-          "type": "string"
-        },
-        "external_id": {
-          "type": "string"
-        },
-        "id": {
-          "type": "integer"
-        },
-        "label": {
-          "type": "string"
-        },
-        "location": {
-          "$ref": "#/definitions/db.Point"
-        },
-        "name": {
-          "type": "string"
-        },
-        "updated_at": {
-          "type": "string"
-        }
-      }
-    },
-    "db.Contact": {
-      "type": "object",
-      "properties": {
-        "about": {
-          "type": "string"
-        },
-        "activity_name": {
-          "type": "string"
-        },
-        "address": {
-          "$ref": "#/definitions/db.Address"
-        },
-        "avatar": {
-          "type": "string"
-        },
-        "created_at": {
-          "type": "string"
-        },
-        "deleted_at": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string"
-        },
-        "id": {
-          "type": "integer"
-        },
-        "name": {
-          "type": "string"
-        },
-        "phone_calling_code": {
-          "type": "string"
-        },
-        "phone_number": {
-          "type": "string"
-        },
-        "saves_amount": {
-          "type": "integer"
-        },
-        "social_links": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/db.Link"
-          }
-        },
-        "tags": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/db.Tag"
-          }
-        },
-        "updated_at": {
-          "type": "string"
-        },
-        "user_id": {
-          "type": "integer"
-        },
-        "views_amount": {
-          "type": "integer"
-        }
-      }
-    },
-    "db.Link": {
-      "type": "object",
-      "properties": {
-        "contact_id": {
-          "type": "integer"
-        },
-        "id": {
-          "type": "integer"
-        },
-        "label": {
-          "type": "string"
-        },
-        "link": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
-        }
-      }
-    },
-    "db.Point": {
-      "type": "object",
-      "properties": {
-        "lat": {
-          "type": "number"
-        },
-        "lng": {
-          "type": "number"
-        }
-      }
-    },
-    "db.Tag": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "integer"
-        },
-        "name": {
-          "type": "string"
-        }
-      }
-    },
-    "db.User": {
-      "type": "object",
-      "properties": {
-        "created_at": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string"
-        },
-        "email_verified": {
-          "type": "boolean"
-        },
-        "id": {
-          "type": "integer"
-        },
-        "updated_at": {
-          "type": "string"
-        }
-      }
-    },
-    "transport.DeleteSavedContactRequest": {
-      "type": "object",
-      "properties": {
-        "contact_id": {
-          "type": "integer",
-          "example": 1
-        }
-      }
-    },
-    "transport.LoginUserRequest": {
-      "type": "object",
-      "properties": {
-        "email": {
-          "type": "string"
-        },
-        "password": {
-          "type": "string"
-        }
-      }
-    },
-    "transport.SaveContactRequest": {
-      "type": "object",
-      "properties": {
-        "contact_id": {
-          "type": "integer",
-          "example": 1
-        }
-      }
-    },
-    "transport.SendOTPRequest": {
-      "type": "object",
-      "properties": {
-        "email": {
-          "type": "string"
-        }
-      }
-    },
-    "transport.SetPasswordRequest": {
-      "type": "object",
-      "properties": {
-        "email": {
-          "type": "string"
-        },
-        "password": {
-          "type": "string"
-        }
-      }
-    },
-    "transport.VerifyOTPRequest": {
-      "type": "object",
-      "properties": {
-        "email": {
-          "type": "string"
-        },
-        "otp": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  "securityDefinitions": {
-    "JWT": {
-      "description": "This API uses JWT Bearer token. You can get one at /auth",
-      "type": "apiKey",
-      "name": "Authorization",
-      "in": "header"
-    }
-  }
 }

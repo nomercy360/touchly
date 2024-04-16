@@ -19,7 +19,7 @@ type api interface {
 	SetPassword(email, password string) error
 	GetUserByID(userID int64) (*db.User, error)
 
-	ListContacts() ([]db.Contact, error)
+	ListContacts(tagIDs []int, search string, page, pageSize int) (db.ContactsPage, error)
 	CreateContact(userID int64, contact db.Contact) (*db.Contact, error)
 	GetContact(id int64) (*db.Contact, error)
 	UpdateContact(userID int64, contact db.Contact) error
@@ -32,8 +32,6 @@ type api interface {
 	ListSavedContacts(userID int64) ([]db.Contact, error)
 	SaveContact(userID, contactID int64) error
 	DeleteSavedContact(userID, contactID int64) error
-
-	ListAddresses() ([]db.Address, error)
 }
 
 func New(api api, jwtSecret string) *transport {
@@ -103,8 +101,6 @@ func ApiRoutes(tr *transport) http.Handler {
 		r.Get("/contacts/saved", tr.ListSavedContactsHandler)
 		r.Post("/contacts/{id}/save", tr.SaveContactHandler)
 		r.Delete("/contacts/{id}/save", tr.DeleteSavedContactHandler)
-
-		r.Get("/address", tr.ListAddressesHandler)
 	})
 
 	return r

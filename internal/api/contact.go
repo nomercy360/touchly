@@ -7,7 +7,7 @@ import (
 
 func (api *api) CreateContact(userID int64, contact db.Contact) (*db.Contact, error) {
 	if contact.Name == "" {
-		return nil, errors.New("full name or name is required")
+		return nil, errors.New("name is required")
 	}
 
 	contact.UserID = userID
@@ -39,11 +39,19 @@ func (api *api) UpdateContact(userID int64, contact db.Contact) error {
 	return nil
 }
 
-func (api *api) ListContacts() ([]db.Contact, error) {
-	contacts, err := api.storage.ListContacts()
+func (api *api) ListContacts(tagIDs []int, search string, page, pageSize int) (db.ContactsPage, error) {
+	if page < 1 {
+		page = 1
+	}
+
+	if pageSize < 1 {
+		pageSize = 20
+	}
+
+	contacts, err := api.storage.ListContacts(tagIDs, search, page, pageSize)
 
 	if err != nil {
-		return nil, err
+		return contacts, err
 	}
 
 	return contacts, nil
@@ -83,14 +91,4 @@ func (api *api) ListSavedContacts(userID int64) ([]db.Contact, error) {
 	}
 
 	return contacts, nil
-}
-
-func (api *api) ListAddresses() ([]db.Address, error) {
-	addresses, err := api.storage.ListAddresses()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return addresses, nil
 }

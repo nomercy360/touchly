@@ -2,7 +2,9 @@ package transport
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"touchly/internal/db"
 )
 
 func decodeRequest(r *http.Request, v interface{}) error {
@@ -147,7 +149,11 @@ func (tr *transport) GetMeHandler(w http.ResponseWriter, r *http.Request) {
 	user, err := tr.api.GetUserByID(userID)
 
 	if err != nil {
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		if errors.As(err, &db.ErrNotFound) {
+			_ = WriteError(w, http.StatusNotFound, err.Error())
+		} else {
+			_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 

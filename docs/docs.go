@@ -28,14 +28,41 @@ const docTemplate = `{
                     "contacts"
                 ],
                 "summary": "List contacts",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page size",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "search query",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "tag id",
+                        "name": "tag",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/db.Contact"
-                            }
+                            "$ref": "#/definitions/db.ContactsPage"
                         }
                     }
                 }
@@ -73,6 +100,46 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/db.Contact"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/contacts/saved": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "get saved contacts",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contacts"
+                ],
+                "summary": "List contacts saved by user",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "user id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.Contact"
+                            }
                         }
                     }
                 }
@@ -218,44 +285,6 @@ const docTemplate = `{
             }
         },
         "/api/contacts/{id}/saved": {
-            "get": {
-                "security": [
-                    {
-                        "JWT": []
-                    }
-                ],
-                "description": "get saved contacts",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "contacts"
-                ],
-                "summary": "List contacts saved by user",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "user id",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/db.Contact"
-                            }
-                        }
-                    }
-                }
-            },
             "delete": {
                 "security": [
                     {
@@ -645,6 +674,26 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "views_amount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "db.ContactsPage": {
+            "type": "object",
+            "properties": {
+                "contacts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.Contact"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total_count": {
                     "type": "integer"
                 }
             }

@@ -3,7 +3,9 @@ package db
 import (
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"fmt"
+	"github.com/lib/pq"
 	"strconv"
 	"strings"
 	"time"
@@ -19,14 +21,21 @@ type Contact struct {
 	SavesAmount      int        `db:"saves_amount" json:"saves_amount"`
 	CreatedAt        time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt        time.Time  `db:"updated_at" json:"updated_at"`
-	Address          Address    `db:"-" json:"address"`
+	Address          *Address   `db:"-" json:"address,omitempty"`
 	PhoneNumber      string     `db:"phone_number" json:"phone_number"`
 	PhoneCallingCode string     `db:"phone_calling_code" json:"phone_calling_code"`
 	Email            string     `db:"email" json:"email"`
-	Tags             []Tag      `db:"-" json:"tags"`
-	SocialLinks      []Link     `db:"-" json:"social_links"`
+	Tags             []Tag      `db:"-" json:"tags,omitempty"`
+	SocialLinks      []Link     `db:"-" json:"social_links,omitempty"`
 	DeletedAt        *time.Time `db:"deleted_at" json:"deleted_at"`
 	UserID           int64      `db:"user_id" json:"user_id"`
+}
+
+type ContactsPage struct {
+	Contacts   []Contact `json:"contacts"`
+	TotalCount int       `json:"total_count"`
+	Page       int       `json:"page"`
+	PageSize   int       `json:"page_size"`
 }
 
 type Link struct {
@@ -47,12 +56,10 @@ type Point struct {
 	Lng float64 `json:"lng"`
 }
 
-func (l Point) Value() (driver.Value, error) {
+func (l *Point) Value() (driver.Value, error) {
 	return fmt.Sprintf("POINT(%f %f)", l.Lng, l.Lat), nil
 }
 
-// Scan makes the Location struct implement the sql.Scanner interface.
-// This method decodes a PostgreSQL point into the struct.
 func (l *Point) Scan(src interface{}) error {
 	if src == nil {
 		return nil
@@ -102,107 +109,83 @@ type Address struct {
 	DeletedAt  *time.Time `db:"deleted_at" json:"deleted_at"`
 }
 
-func addUniqueTag(tags []Tag, newTag Tag) []Tag {
-	for _, tag := range tags {
-		if tag.ID == newTag.ID {
-			return tags
-		}
+func (s *storage) ListContacts(tagIDs []int, search string, page, pageSize int) (ContactsPage, error) {
+	contactsPage := ContactsPage{
+		Page:     page,
+		PageSize: pageSize,
 	}
-	return append(tags, newTag)
-}
 
-func addUniqueLink(links []Link, newLink Link) []Link {
-	for _, link := range links {
-		if link.ID == newLink.ID {
-			return links
-		}
+	offset := (page - 1) * pageSize
+
+	var args []interface{}
+	paramIndex := 1
+
+	var whereClauses []string
+	if search != "" {
+		whereClauses = append(whereClauses, "(c.name ILIKE $"+strconv.Itoa(paramIndex)+" OR c.activity_name ILIKE $"+strconv.Itoa(paramIndex)+")")
+		args = append(args, "%"+search+"%")
+		paramIndex++
 	}
-	return append(links, newLink)
-}
 
-func (s *storage) ListContacts() ([]Contact, error) {
-	query := `
-		SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount, c.saves_amount, c.created_at, c.updated_at, c.phone_number, c.email, c.user_id,
-		       a.id, a.external_id, a.contact_id, a.label, a.name, ST_AsText(a.location) as location, a.created_at, a.updated_at, a.deleted_at,
-		       t.id, t.name,
-			   sml.id, sml.type, sml.link, sml.label
-		FROM contacts c
-		LEFT JOIN addresses a ON c.id = a.contact_id
-		LEFT JOIN contact_tags ct ON c.id = ct.contact_id
-		LEFT JOIN tags t ON ct.tag_id = t.id
-		LEFT JOIN social_media_links sml ON c.id = sml.contact_id
-		ORDER BY c.created_at DESC
-	`
+	if len(tagIDs) > 0 {
+		whereClauses = append(whereClauses, "ct.tag_id = ANY($"+strconv.Itoa(paramIndex)+")")
+		args = append(args, pq.Array(tagIDs))
+		paramIndex++
+	}
 
-	contacts := make([]Contact, 0)
+	where := ""
+	if len(whereClauses) > 0 {
+		where = " WHERE " + strings.Join(whereClauses, " AND ")
+	}
 
-	contactsMap := make(map[int64]*Contact)
+	countQuery := `SELECT COUNT(*) FROM contacts c`
+	if len(tagIDs) > 0 {
+		countQuery += ` JOIN contact_tags ct ON c.id = ct.contact_id`
+	}
 
-	rows, err := s.pg.Query(query)
-
+	countQuery += where
+	err := s.pg.QueryRow(countQuery, args...).Scan(&contactsPage.TotalCount)
 	if err != nil {
-		return nil, err
+		return contactsPage, fmt.Errorf("error fetching contacts count: %w", err)
+	}
+
+	selectQuery := `
+        SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount, c.saves_amount, c.created_at, c.updated_at, c.phone_number, c.email, c.user_id
+        FROM contacts c`
+
+	if len(tagIDs) > 0 {
+		selectQuery += ` JOIN contact_tags ct ON c.id = ct.contact_id`
+	}
+
+	selectQuery += where
+	selectQuery += `
+        ORDER BY c.created_at DESC
+        LIMIT $` + strconv.Itoa(paramIndex) + ` OFFSET $` + strconv.Itoa(paramIndex+1)
+
+	args = append(args, pageSize, offset)
+
+	rows, err := s.pg.Query(selectQuery, args...)
+	if err != nil {
+		return contactsPage, err
 	}
 
 	defer rows.Close()
 
+	contacts := make([]Contact, 0)
+
 	for rows.Next() {
 		var c Contact
-		var a Address
-		var tagID sql.NullInt64
-		var tagName sql.NullString
-		var linkType, linkLink, linkLabel sql.NullString
-		var linkID sql.NullInt64
-
 		err = rows.Scan(
-			&c.ID, &c.Name, &c.Avatar, &c.ActivityName,
-			&c.About, &c.ViewsAmount, &c.SavesAmount,
-			&c.CreatedAt, &c.UpdatedAt, &c.PhoneNumber, &c.Email,
-			&c.UserID, &a.ID, &a.ExternalID, &a.ContactID, &a.Label,
-			&a.Name, &a.Location, &a.CreatedAt, &a.UpdatedAt,
-			&a.DeletedAt, &tagID, &tagName,
-			&linkID, &linkType, &linkLink, &linkLabel,
+			&c.ID, &c.Name, &c.Avatar, &c.ActivityName, &c.About, &c.ViewsAmount, &c.SavesAmount, &c.CreatedAt, &c.UpdatedAt, &c.PhoneNumber, &c.Email, &c.UserID,
 		)
-
 		if err != nil {
-			return nil, fmt.Errorf("scanning product row: %w", err)
+			return contactsPage, fmt.Errorf("scanning contact row: %w", err)
 		}
-
-		contact, ok := contactsMap[c.ID]
-		if !ok {
-			contact = &c
-			contactsMap[c.ID] = contact
-		}
-
-		contact.Address = a
-
-		if tagID.Valid && tagName.Valid {
-			t := Tag{
-				ID:   tagID.Int64,
-				Name: tagName.String,
-			}
-
-			contact.Tags = addUniqueTag(contact.Tags, t)
-		}
-
-		if linkID.Valid && linkType.Valid && linkLink.Valid && linkLabel.Valid {
-			l := Link{
-				ID:    linkID.Int64,
-				Type:  linkType.String,
-				Link:  linkLink.String,
-				Label: linkLabel.String,
-			}
-
-			contact.SocialLinks = addUniqueLink(contact.SocialLinks, l)
-		}
-
+		contacts = append(contacts, c)
 	}
 
-	for _, contact := range contactsMap {
-		contacts = append(contacts, *contact)
-	}
-
-	return contacts, nil
+	contactsPage.Contacts = contacts
+	return contactsPage, nil
 }
 
 func (s *storage) CreateContact(contact Contact) (*Contact, error) {
@@ -327,73 +310,47 @@ func (s *storage) GetContact(id int64) (*Contact, error) {
 	var contact Contact
 
 	query := `
-		SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount, c.saves_amount, c.created_at, c.updated_at, c.phone_number, c.email, c.user_id,
-		       a.id, a.external_id, a.contact_id, a.label, a.name, ST_AsText(a.location) as location, a.created_at, a.updated_at, a.deleted_at,
-		       t.id, t.name,
-		       				sml.id, sml.type, sml.link
+		SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount, c.saves_amount, c.created_at, c.updated_at, c.phone_number, c.email, c.user_id
 		FROM contacts c
-		LEFT JOIN addresses a ON c.id = a.contact_id
-		LEFT JOIN contact_tags ct ON c.id = ct.contact_id
-		LEFT JOIN tags t ON ct.tag_id = t.id
-		LEFT JOIN social_media_links sml ON c.id = sml.contact_id
 		WHERE c.id=$1
 	`
 
-	rows, err := s.pg.Query(query, id)
+	err := s.pg.Get(&contact, query, id)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("contact with id %d not found", id)
+		}
+		return nil, err
+	}
+
+	tags := make([]Tag, 0)
+
+	err = s.pg.Select(&tags, "SELECT t.id, t.name FROM tags t JOIN contact_tags ct ON t.id = ct.tag_id WHERE ct.contact_id=$1", id)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if !rows.Next() {
-		return nil, ErrNotFound
+	contact.Tags = tags
+	links := make([]Link, 0)
+
+	err = s.pg.Select(&links, "SELECT id, type, link FROM social_media_links WHERE contact_id=$1", id)
+
+	if err != nil {
+		return nil, err
 	}
 
-	defer rows.Close()
+	contact.SocialLinks = links
+	var address Address
 
-	for rows.Next() {
-		var a Address
-		var tagID sql.NullInt64
-		var tagName sql.NullString
-		var linkType sql.NullString
-		var linkLink sql.NullString
-		var linkID sql.NullInt64
+	err = s.pg.Get(&address, "SELECT id, external_id, contact_id, label, name, ST_AsText(location) as location, created_at, updated_at, deleted_at FROM addresses WHERE contact_id=$1", id)
 
-		err = rows.Scan(
-			&contact.ID, &contact.Name, &contact.Avatar, &contact.ActivityName,
-			&contact.About, &contact.ViewsAmount, &contact.SavesAmount,
-			&contact.CreatedAt, &contact.UpdatedAt, &contact.PhoneNumber, &contact.Email,
-			&contact.UserID, &a.ID, &a.ExternalID, &a.ContactID, &a.Label,
-			&a.Name, &a.Location, &a.CreatedAt, &a.UpdatedAt,
-			&a.DeletedAt, &tagID, &tagName,
-			&linkID, &linkType, &linkLink,
-		)
-
-		if err != nil {
-			return nil, fmt.Errorf("scanning product row: %w", err)
-		}
-
-		contact.Address = a
-
-		if tagID.Valid && tagName.Valid {
-			t := Tag{
-				ID:   tagID.Int64,
-				Name: tagName.String,
-			}
-
-			contact.Tags = addUniqueTag(contact.Tags, t)
-		}
-
-		if linkID.Valid && linkType.Valid && linkLink.Valid {
-			l := Link{
-				ID:   linkID.Int64,
-				Type: linkType.String,
-				Link: linkLink.String,
-			}
-
-			contact.SocialLinks = addUniqueLink(contact.SocialLinks, l)
-		}
+	if err != nil {
+		return nil, err
 	}
+
+	contact.Address = &address
 
 	return &contact, nil
 }
@@ -421,23 +378,17 @@ func (s *storage) DeleteSavedContact(userID, contactID int64) error {
 func (s *storage) ListSavedContacts(userID int64) ([]Contact, error) {
 	contacts := make([]Contact, 0)
 
-	err := s.pg.Select(&contacts, "SELECT * FROM contacts WHERE id IN (SELECT contact_id FROM saved_contacts WHERE user_id=$1)", userID)
+	query := `
+		SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount, c.saves_amount, c.created_at, c.updated_at, c.phone_number, c.email, c.user_id
+		FROM contacts c
+		WHERE c.id IN (SELECT contact_id FROM saved_contacts WHERE user_id=$1)
+	`
+
+	err := s.pg.Select(&contacts, query, userID)
 
 	if err != nil {
 		return nil, err
 	}
 
 	return contacts, nil
-}
-
-func (s *storage) ListAddresses() ([]Address, error) {
-	addresses := make([]Address, 0)
-
-	err := s.pg.Select(&addresses, "SELECT id, external_id, contact_id, label, name, ST_AsText(location) as location, created_at, updated_at, deleted_at FROM addresses")
-
-	if err != nil {
-		return nil, err
-	}
-
-	return addresses, nil
 }

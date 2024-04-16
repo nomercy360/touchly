@@ -149,7 +149,9 @@ func (s *storage) GetUserByID(userID int64) (*User, error) {
 	err := s.pg.Get(&user, query, userID)
 
 	if err != nil {
-		return nil, err
+		if IsNoRowsError(err) {
+			return nil, ErrNotFound
+		}
 	}
 
 	return &user, nil
