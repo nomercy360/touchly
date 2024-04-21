@@ -1,9 +1,15 @@
 package api
 
 import (
+	"log"
+	"time"
 	"touchly/internal/db"
 	"touchly/internal/services"
 )
+
+type s3Client interface {
+	GetPresignedURL(objectKey string, duration time.Duration) (string, error)
+}
 
 type storage interface {
 	CreateUser(user db.User) (*db.User, error)
@@ -36,11 +42,15 @@ type emailClient interface {
 type api struct {
 	storage     storage
 	emailClient emailClient
+	s3Client    s3Client
+	logger      *log.Logger
 }
 
-func NewApi(storage storage, emailClient emailClient) *api {
+func NewApi(storage storage, emailClient emailClient, s3Client s3Client) *api {
 	return &api{
 		storage:     storage,
 		emailClient: emailClient,
+		s3Client:    s3Client,
+		logger:      log.New(log.Writer(), "api: ", log.LstdFlags),
 	}
 }

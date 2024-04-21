@@ -6,6 +6,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
 	"strings"
+	"touchly/internal/terrors"
 )
 
 func parseToken(authorizationHeader string) (string, error) {
@@ -27,7 +28,7 @@ func WithAuth(jwtSecret string) func(handler http.Handler) http.Handler {
 
 			auth, err := parseToken(r.Header.Get("Authorization"))
 			if err != nil {
-				_ = WriteError(w, http.StatusUnauthorized, err.Error())
+				WriteError(r, w, terrors.Unauthorized(err, "invalid authorization header"))
 				return
 			}
 
@@ -36,7 +37,7 @@ func WithAuth(jwtSecret string) func(handler http.Handler) http.Handler {
 			})
 
 			if err != nil {
-				_ = WriteError(w, http.StatusUnauthorized, err.Error())
+				WriteError(r, w, terrors.Unauthorized(err, "invalid token"))
 				return
 			}
 

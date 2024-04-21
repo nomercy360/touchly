@@ -1,7 +1,6 @@
 package transport
 
 import (
-	"errors"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
@@ -38,7 +37,7 @@ func getUserIDFromRequest(r *http.Request) int64 {
 func (tr *transport) CreateContactHandler(w http.ResponseWriter, r *http.Request) {
 	var contact db.Contact
 	if err := decodeRequest(r, &contact); err != nil {
-		_ = WriteError(w, http.StatusBadRequest, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
@@ -46,11 +45,11 @@ func (tr *transport) CreateContactHandler(w http.ResponseWriter, r *http.Request
 
 	createdContact, err := tr.api.CreateContact(userID, contact)
 	if err != nil {
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusCreated, createdContact)
+	WriteJSON(w, http.StatusCreated, createdContact)
 }
 
 // GetContactHandler godoc
@@ -65,23 +64,18 @@ func (tr *transport) CreateContactHandler(w http.ResponseWriter, r *http.Request
 func (tr *transport) GetContactHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := getIDFromRequest(r)
 	if err != nil {
-		_ = WriteError(w, http.StatusBadRequest, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
 	contact, err := tr.api.GetContact(id)
 
 	if err != nil {
-		if errors.As(err, &db.ErrNotFound) {
-			_ = WriteError(w, http.StatusNotFound, err.Error())
-			return
-		}
-
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, contact)
+	WriteJSON(w, http.StatusOK, contact)
 }
 
 // UpdateContactHandler godoc
@@ -97,7 +91,7 @@ func (tr *transport) GetContactHandler(w http.ResponseWriter, r *http.Request) {
 func (tr *transport) UpdateContactHandler(w http.ResponseWriter, r *http.Request) {
 	var contact db.Contact
 	if err := decodeRequest(r, &contact); err != nil {
-		_ = WriteError(w, http.StatusBadRequest, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
@@ -105,11 +99,11 @@ func (tr *transport) UpdateContactHandler(w http.ResponseWriter, r *http.Request
 
 	err := tr.api.UpdateContact(userID, contact)
 	if err != nil {
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, nil)
+	WriteOK(w)
 }
 
 // DeleteContactHandler godoc
@@ -125,7 +119,7 @@ func (tr *transport) UpdateContactHandler(w http.ResponseWriter, r *http.Request
 func (tr *transport) DeleteContactHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := getIDFromRequest(r)
 	if err != nil {
-		_ = WriteError(w, http.StatusBadRequest, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
@@ -133,11 +127,11 @@ func (tr *transport) DeleteContactHandler(w http.ResponseWriter, r *http.Request
 
 	err = tr.api.DeleteContact(userID, id)
 	if err != nil {
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, nil)
+	WriteOK(w)
 }
 
 func queryToIntArray(query string) ([]int, error) {
@@ -186,11 +180,11 @@ func (tr *transport) ListContactsHandler(w http.ResponseWriter, r *http.Request)
 	contacts, err := tr.api.ListContacts(tagIDs, search, page, pageSize)
 
 	if err != nil {
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, contacts)
+	WriteJSON(w, http.StatusOK, contacts)
 }
 
 // ListSavedContactsHandler godoc
@@ -209,11 +203,11 @@ func (tr *transport) ListSavedContactsHandler(w http.ResponseWriter, r *http.Req
 	contacts, err := tr.api.ListSavedContacts(userID)
 
 	if err != nil {
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, contacts)
+	WriteJSON(w, http.StatusOK, contacts)
 }
 
 type SaveContactRequest struct {
@@ -237,17 +231,17 @@ func (tr *transport) SaveContactHandler(w http.ResponseWriter, r *http.Request) 
 	userID := getUserIDFromRequest(r)
 
 	if err := decodeRequest(r, &data); err != nil {
-		_ = WriteError(w, http.StatusBadRequest, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
 	err := tr.api.SaveContact(userID, data.ContactID)
 	if err != nil {
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, nil)
+	WriteOK(w)
 }
 
 type DeleteSavedContactRequest struct {
@@ -271,15 +265,15 @@ func (tr *transport) DeleteSavedContactHandler(w http.ResponseWriter, r *http.Re
 	userID := getUserIDFromRequest(r)
 
 	if err := decodeRequest(r, &data); err != nil {
-		_ = WriteError(w, http.StatusBadRequest, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
 	err := tr.api.DeleteSavedContact(userID, data.ContactID)
 	if err != nil {
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, nil)
+	WriteOK(w)
 }

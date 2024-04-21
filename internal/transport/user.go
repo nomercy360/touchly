@@ -2,9 +2,7 @@ package transport
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
-	"touchly/internal/db"
 )
 
 func decodeRequest(r *http.Request, v interface{}) error {
@@ -29,17 +27,17 @@ func (tr *transport) LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 	var req LoginUserRequest
 
 	if err := decodeRequest(r, &req); err != nil {
-		_ = WriteError(w, http.StatusBadRequest, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
 	token, err := tr.api.LoginUser(req.Email, req.Password)
 	if err != nil {
-		_ = WriteError(w, http.StatusUnauthorized, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, map[string]string{"token": *token})
+	WriteJSON(w, http.StatusOK, map[string]string{"token": *token})
 }
 
 type VerifyOTPRequest struct {
@@ -60,17 +58,17 @@ func (tr *transport) VerifyOTPHandler(w http.ResponseWriter, r *http.Request) {
 	var req VerifyOTPRequest
 
 	if err := decodeRequest(r, &req); err != nil {
-		_ = WriteError(w, http.StatusBadRequest, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
 	err := tr.api.VerifyOTP(req.Email, req.OTP)
 	if err != nil {
-		_ = WriteError(w, http.StatusUnauthorized, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, nil)
+	WriteOK(w)
 }
 
 type SendOTPRequest struct {
@@ -90,17 +88,17 @@ func (tr *transport) SendOTPHandler(w http.ResponseWriter, r *http.Request) {
 	var req SendOTPRequest
 
 	if err := decodeRequest(r, &req); err != nil {
-		_ = WriteError(w, http.StatusBadRequest, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
 	err := tr.api.SendOTP(req.Email)
 	if err != nil {
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, map[string]string{"message": "OK"})
+	WriteOK(w)
 }
 
 type SetPasswordRequest struct {
@@ -121,17 +119,17 @@ func (tr *transport) SetPasswordHandler(w http.ResponseWriter, r *http.Request) 
 	var req SetPasswordRequest
 
 	if err := decodeRequest(r, &req); err != nil {
-		_ = WriteError(w, http.StatusBadRequest, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
 	err := tr.api.SetPassword(req.Email, req.Password)
 	if err != nil {
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, map[string]string{"message": "OK"})
+	WriteOK(w)
 }
 
 // GetMeHandler godoc
@@ -149,13 +147,9 @@ func (tr *transport) GetMeHandler(w http.ResponseWriter, r *http.Request) {
 	user, err := tr.api.GetUserByID(userID)
 
 	if err != nil {
-		if errors.As(err, &db.ErrNotFound) {
-			_ = WriteError(w, http.StatusNotFound, err.Error())
-		} else {
-			_ = WriteError(w, http.StatusInternalServerError, err.Error())
-		}
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, user)
+	WriteJSON(w, http.StatusOK, user)
 }

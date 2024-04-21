@@ -17,11 +17,11 @@ func (tr *transport) ListTagsHandler(w http.ResponseWriter, r *http.Request) {
 	tags, err := tr.api.ListTags()
 
 	if err != nil {
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, tags)
+	WriteJSON(w, http.StatusOK, tags)
 }
 
 // CreateTagHandler godoc
@@ -37,17 +37,17 @@ func (tr *transport) ListTagsHandler(w http.ResponseWriter, r *http.Request) {
 func (tr *transport) CreateTagHandler(w http.ResponseWriter, r *http.Request) {
 	var tag db.Tag
 	if err := decodeRequest(r, &tag); err != nil {
-		_ = WriteError(w, http.StatusBadRequest, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
 	createdTag, err := tr.api.CreateTag(tag)
 	if err != nil {
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusCreated, createdTag)
+	WriteJSON(w, http.StatusCreated, createdTag)
 }
 
 // DeleteTagHandler godoc
@@ -63,15 +63,15 @@ func (tr *transport) CreateTagHandler(w http.ResponseWriter, r *http.Request) {
 func (tr *transport) DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := getIDFromRequest(r)
 	if err != nil {
-		_ = WriteError(w, http.StatusBadRequest, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
 	err = tr.api.DeleteTag(id)
 	if err != nil {
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		WriteError(r, w, err)
 		return
 	}
 
-	_ = WriteJSON(w, http.StatusOK, nil)
+	WriteOK(w)
 }

@@ -11,6 +11,7 @@ import (
 	"time"
 	"touchly/internal/db"
 	"touchly/internal/services"
+	"touchly/internal/terrors"
 )
 
 func GenerateOTPCode() string {
@@ -60,29 +61,25 @@ func (api *api) LoginUser(email, password string) (*string, error) {
 	}
 }
 
-var (
-	ErrorInvalidRequest = errors.New("invalid request")
-	ErrorUserNotFound   = errors.New("user not found")
-)
-
 func (api *api) SendOTP(email string) error {
 	if email == "" {
-		return ErrorInvalidRequest
+		return terrors.InvalidRequest(nil, "email is required")
 	}
 
 	user, err := api.storage.GetUserByEmail(email)
 
 	if err != nil {
-		if errors.As(err, &db.ErrNotFound) {
+		if db.IsNoRowsError(err) {
 			u := db.User{
 				Email:         email,
 				EmailVerified: false,
 			}
 
-			if user, err = api.storage.CreateUser(u); err != nil {
+			user, err = api.storage.CreateUser(u)
+
+			if err != nil {
 				return err
 			}
-
 		} else {
 			return err
 		}
@@ -148,31 +145,35 @@ func (api *api) SendOTPEmail(recipientEmail, otpCode string) error {
 
 func (api *api) VerifyOTP(email, otpCode string) error {
 	if email == "" || otpCode == "" {
-		return ErrorInvalidRequest
+		return terrors.InvalidRequest(nil, "email and OTP code are required")
 	}
 
 	user, err := api.storage.GetUserByEmail(email)
 
 	if err != nil {
-		return err
+		if db.IsNoRowsError(err) {
+			return terrors.InvalidRequest(nil, "user not found")
+		} else {
+			return terrors.InternalServerError(err, "failed to get user")
+		}
 	}
 
 	otp, err := api.storage.GetOTPByCode(otpCode, user.ID)
 
 	if err != nil {
-		return err
+		return terrors.InternalServerError(err, "invalid OTP")
 	}
 
 	if otp.IsUsed {
-		return errors.New("OTP is already used")
+		return terrors.InvalidRequest(nil, "OTP is already used")
 	}
 
 	if err := api.storage.SetOTPIsUsed(otp.ID); err != nil {
-		return err
+		return terrors.InternalServerError(err, "failed to update OTP")
 	}
 
 	if err := api.storage.UpdateUserVerified(user.ID); err != nil {
-		return err
+		return terrors.InternalServerError(err, "failed to update user")
 	}
 
 	return nil
@@ -188,16 +189,16 @@ func hashPassword(password string) (string, error) {
 
 func (api *api) SetPassword(email, password string) error {
 	if email == "" || password == "" {
-		return ErrorInvalidRequest
+		return terrors.InvalidRequest(nil, "email and password are required")
 	}
 
 	hashedPassword, err := hashPassword(password)
 	if err != nil {
-		return err
+		return terrors.InternalServerError(err, "failed to hash password")
 	}
 
 	if err := api.storage.UpdateUserPassword(email, hashedPassword); err != nil {
-		return err
+		return terrors.InternalServerError(err, "failed to set password")
 	}
 
 	return nil
@@ -207,7 +208,11 @@ func (api *api) GetUserByID(userID int64) (*db.User, error) {
 	user, err := api.storage.GetUserByID(userID)
 
 	if err != nil {
-		return nil, err
+		if db.IsNoRowsError(err) {
+			return nil, terrors.NotFound(err, "user not found")
+		} else {
+			return nil, terrors.InternalServerError(err, "failed to get user")
+		}
 	}
 
 	return user, nil

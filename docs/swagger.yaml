@@ -1,4 +1,9 @@
 definitions:
+  api.UploadURL:
+    properties:
+      url:
+        type: string
+    type: object
   db.Address:
     properties:
       contact_id:
@@ -38,6 +43,8 @@ definitions:
         type: string
       id:
         type: integer
+      is_published:
+        type: boolean
       name:
         type: string
       phone_calling_code:
@@ -61,11 +68,32 @@ definitions:
       views_amount:
         type: integer
     type: object
+  db.ContactListEntry:
+    properties:
+      about:
+        type: string
+      activity_name:
+        type: string
+      avatar:
+        type: string
+      id:
+        type: integer
+      is_published:
+        type: boolean
+      name:
+        type: string
+      saves_amount:
+        type: integer
+      user_id:
+        type: integer
+      views_amount:
+        type: integer
+    type: object
   db.ContactsPage:
     properties:
       contacts:
         items:
-          $ref: '#/definitions/db.Contact'
+          $ref: '#/definitions/db.ContactListEntry'
         type: array
       page:
         type: integer
@@ -518,6 +546,29 @@ paths:
       summary: Delete tag
       tags:
         - tags
+  /api/uploads/get-url:
+    post:
+      consumes:
+        - application/json
+      description: returns a presigned URL for uploading a file
+      parameters:
+        - description: file name
+          in: query
+          name: file_name
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.UploadURL'
+      security:
+        - JWT: [ ]
+      summary: Get upload URL
+      tags:
+        - uploads
 securityDefinitions:
   JWT:
     description: This API uses JWT Bearer token. You can get one at /auth

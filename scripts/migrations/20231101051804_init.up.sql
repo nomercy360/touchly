@@ -37,7 +37,8 @@ CREATE TABLE contacts
     phone_number       VARCHAR(50),
     phone_calling_code VARCHAR(10),
     email              VARCHAR(255),
-    user_id            INTEGER   NOT NULL REFERENCES users (id)
+    user_id      INTEGER NOT NULL REFERENCES users (id),
+    is_published BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE addresses

@@ -29,13 +29,26 @@ type Contact struct {
 	SocialLinks      []Link     `db:"-" json:"social_links,omitempty"`
 	DeletedAt        *time.Time `db:"deleted_at" json:"deleted_at"`
 	UserID           int64      `db:"user_id" json:"user_id"`
+	IsPublished      bool       `db:"is_published" json:"is_published"`
+}
+
+type ContactListEntry struct {
+	ID           int64  `db:"id" json:"id"`
+	Name         string `db:"name" json:"name"`
+	Avatar       string `db:"avatar" json:"avatar"`
+	ActivityName string `db:"activity_name" json:"activity_name"`
+	About        string `db:"about" json:"about"`
+	ViewsAmount  int    `db:"views_amount" json:"views_amount"`
+	SavesAmount  int    `db:"saves_amount" json:"saves_amount"`
+	UserID       int64  `db:"user_id" json:"user_id"`
+	IsPublished  bool   `db:"is_published" json:"is_published"`
 }
 
 type ContactsPage struct {
-	Contacts   []Contact `json:"contacts"`
-	TotalCount int       `json:"total_count"`
-	Page       int       `json:"page"`
-	PageSize   int       `json:"page_size"`
+	Contacts   []ContactListEntry `json:"contacts"`
+	TotalCount int                `json:"total_count"`
+	Page       int                `json:"page"`
+	PageSize   int                `json:"page_size"`
 }
 
 type Link struct {
@@ -150,7 +163,7 @@ func (s *storage) ListContacts(tagIDs []int, search string, page, pageSize int) 
 	}
 
 	selectQuery := `
-        SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount, c.saves_amount, c.created_at, c.updated_at, c.phone_number, c.email, c.user_id
+        SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount, c.saves_amount, c.user_id, c.is_published
         FROM contacts c`
 
 	if len(tagIDs) > 0 {
@@ -171,12 +184,13 @@ func (s *storage) ListContacts(tagIDs []int, search string, page, pageSize int) 
 
 	defer rows.Close()
 
-	contacts := make([]Contact, 0)
+	contacts := make([]ContactListEntry, 0)
 
 	for rows.Next() {
-		var c Contact
+		var c ContactListEntry
 		err = rows.Scan(
-			&c.ID, &c.Name, &c.Avatar, &c.ActivityName, &c.About, &c.ViewsAmount, &c.SavesAmount, &c.CreatedAt, &c.UpdatedAt, &c.PhoneNumber, &c.Email, &c.UserID,
+			&c.ID, &c.Name, &c.Avatar, &c.ActivityName, &c.About, &c.ViewsAmount, &c.SavesAmount, &c.UserID,
+			&c.IsPublished,
 		)
 		if err != nil {
 			return contactsPage, fmt.Errorf("scanning contact row: %w", err)

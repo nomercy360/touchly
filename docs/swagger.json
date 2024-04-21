@@ -573,9 +573,54 @@
                     }
                 }
             }
+        },
+      "/api/uploads/get-url": {
+        "post": {
+          "security": [
+            {
+              "JWT": []
+            }
+          ],
+          "description": "returns a presigned URL for uploading a file",
+          "consumes": [
+            "application/json"
+          ],
+          "produces": [
+            "application/json"
+          ],
+          "tags": [
+            "uploads"
+          ],
+          "summary": "Get upload URL",
+          "parameters": [
+            {
+              "type": "string",
+              "description": "file name",
+              "name": "file_name",
+              "in": "query",
+              "required": true
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "OK",
+              "schema": {
+                "$ref": "#/definitions/api.UploadURL"
+              }
+            }
+          }
+        }
         }
     },
     "definitions": {
+      "api.UploadURL": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      },
         "db.Address": {
             "type": "object",
             "properties": {
@@ -635,6 +680,9 @@
                 "id": {
                     "type": "integer"
                 },
+              "is_published": {
+                "type": "boolean"
+              },
                 "name": {
                     "type": "string"
                 },
@@ -670,13 +718,45 @@
                 }
             }
         },
+      "db.ContactListEntry": {
+        "type": "object",
+        "properties": {
+          "about": {
+            "type": "string"
+          },
+          "activity_name": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "is_published": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "saves_amount": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "integer"
+          },
+          "views_amount": {
+            "type": "integer"
+          }
+        }
+      },
         "db.ContactsPage": {
             "type": "object",
             "properties": {
                 "contacts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/db.Contact"
+                      "$ref": "#/definitions/db.ContactListEntry"
                     }
                 },
                 "page": {

@@ -12,6 +12,7 @@ import (
 	admSvc "touchly/internal/api"
 	"touchly/internal/db"
 	"touchly/internal/services"
+	"touchly/internal/storage"
 	"touchly/internal/transport"
 )
 
@@ -21,6 +22,14 @@ type Config struct {
 	Server       ServerConfig `yaml:"server"`
 	JWTSecret    string       `yaml:"jwt_secret"`
 	ResendApiKey string       `yaml:"resend_api_key"`
+	AWS          AWSConfig    `yaml:"aws"`
+}
+
+type AWSConfig struct {
+	AccessKeyID     string `yaml:"access_key_id"`
+	SecretAccessKey string `yaml:"secret_access_key"`
+	Bucket          string `yaml:"bucket"`
+	AccountId       string `yaml:"account_id"`
 }
 
 // ServerConfig represents the server configuration structure
@@ -62,13 +71,13 @@ func main() {
 		log.Fatalf("Error reading config: %v", err)
 	}
 
-	storage, err := db.NewDB(config.DbConnString)
+	pg, err := db.NewDB(config.DbConnString)
 
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v\n", err)
 	}
 
-	defer storage.Close()
+	defer pg.Close()
 
 	// Create a new Echo instance
 	r := chi.NewRouter()
@@ -77,7 +86,10 @@ func main() {
 
 	email := services.NewEmailClient(config.ResendApiKey)
 
-	api := admSvc.NewApi(storage, email)
+	s3Client, err := storage.NewS3Client(
+		config.AWS.AccessKeyID, config.AWS.SecretAccessKey, config.AWS.AccountId, config.AWS.Bucket)
+
+	api := admSvc.NewApi(pg, email, s3Client)
 
 	app := transport.New(api, config.JWTSecret)
 

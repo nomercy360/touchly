@@ -1,13 +1,13 @@
 package api
 
 import (
-	"errors"
 	"touchly/internal/db"
+	"touchly/internal/terrors"
 )
 
 func (api *api) CreateContact(userID int64, contact db.Contact) (*db.Contact, error) {
 	if contact.Name == "" {
-		return nil, errors.New("name is required")
+		return nil, terrors.InvalidRequest(nil, "name is required")
 	}
 
 	contact.UserID = userID
@@ -15,7 +15,7 @@ func (api *api) CreateContact(userID int64, contact db.Contact) (*db.Contact, er
 	res, err := api.storage.CreateContact(contact)
 
 	if err != nil {
-		return nil, err
+		return nil, terrors.InternalServerError(err, "failed to create contact")
 	}
 
 	return res, nil
@@ -23,7 +23,7 @@ func (api *api) CreateContact(userID int64, contact db.Contact) (*db.Contact, er
 
 func (api *api) DeleteContact(userID, id int64) error {
 	if err := api.storage.DeleteContact(userID, id); err != nil {
-		return err
+		return terrors.InternalServerError(err, "failed to delete contact")
 	}
 
 	return nil
@@ -33,7 +33,7 @@ func (api *api) UpdateContact(userID int64, contact db.Contact) error {
 	contact.UserID = userID
 
 	if err := api.storage.UpdateContact(contact); err != nil {
-		return err
+		return terrors.InternalServerError(err, "failed to update contact")
 	}
 
 	return nil
@@ -51,7 +51,7 @@ func (api *api) ListContacts(tagIDs []int, search string, page, pageSize int) (d
 	contacts, err := api.storage.ListContacts(tagIDs, search, page, pageSize)
 
 	if err != nil {
-		return contacts, err
+		return contacts, terrors.InternalServerError(err, "failed to list contacts")
 	}
 
 	return contacts, nil
@@ -61,7 +61,7 @@ func (api *api) GetContact(id int64) (*db.Contact, error) {
 	contact, err := api.storage.GetContact(id)
 
 	if err != nil {
-		return nil, err
+		return nil, terrors.InternalServerError(err, "failed to get contact")
 	}
 
 	return contact, nil
@@ -69,7 +69,7 @@ func (api *api) GetContact(id int64) (*db.Contact, error) {
 
 func (api *api) SaveContact(userID, contactID int64) error {
 	if err := api.storage.SaveContact(userID, contactID); err != nil {
-		return err
+		return terrors.InternalServerError(err, "failed to save contact")
 	}
 
 	return nil
@@ -77,7 +77,7 @@ func (api *api) SaveContact(userID, contactID int64) error {
 
 func (api *api) DeleteSavedContact(userID, contactID int64) error {
 	if err := api.storage.DeleteSavedContact(userID, contactID); err != nil {
-		return err
+		return terrors.InternalServerError(err, "failed to delete saved contact")
 	}
 
 	return nil
@@ -87,7 +87,7 @@ func (api *api) ListSavedContacts(userID int64) ([]db.Contact, error) {
 	contacts, err := api.storage.ListSavedContacts(userID)
 
 	if err != nil {
-		return nil, err
+		return nil, terrors.InternalServerError(err, "failed to list saved contacts")
 	}
 
 	return contacts, nil

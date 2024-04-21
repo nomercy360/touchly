@@ -25,9 +25,10 @@ func (s *storage) CreateUser(user User) (*User, error) {
 		INSERT INTO users
 		   (email, password_hash, created_at, updated_at, email_verified)
 		VALUES ($1, $2, NOW(), NOW(), $3)
+		RETURNING id, email, password_hash, created_at, updated_at, email_verified
 	`
 
-	err := s.pg.Get(&user, query, user.Email, user.PasswordHash, user.EmailVerified)
+	err := s.pg.QueryRowx(query, user.Email, user.PasswordHash, user.EmailVerified).StructScan(&user)
 
 	if err != nil {
 		return nil, err
@@ -59,6 +60,8 @@ func (s *storage) UpdateUserPassword(email, password string) error {
 		UPDATE users
 		SET password_hash = $1
 		WHERE email = $2
+		AND email_verified = true
+		AND password_hash IS NULL
 	`
 
 	res, err := s.pg.Exec(query, password, email)

@@ -2,9 +2,13 @@ package transport
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/go-chi/chi/v5"
+	"log"
 	"net/http"
+	api2 "touchly/internal/api"
 	"touchly/internal/db"
+	"touchly/internal/terrors"
 )
 
 type transport struct {
@@ -32,6 +36,8 @@ type api interface {
 	ListSavedContacts(userID int64) ([]db.Contact, error)
 	SaveContact(userID, contactID int64) error
 	DeleteSavedContact(userID, contactID int64) error
+
+	GetPresignedURL(userID int64, filename string) (*api2.UploadURL, error)
 }
 
 func New(api api, jwtSecret string) *transport {
@@ -39,27 +45,44 @@ func New(api api, jwtSecret string) *transport {
 }
 
 // WriteError responds to a HTTP request with an error.
-func WriteError(w http.ResponseWriter, code int, message string) error {
-	err := WriteJSON(w, code, map[string]string{"error": message})
-	if err != nil {
-		return err
+func WriteError(r *http.Request, w http.ResponseWriter, err error) {
+	var terror *terrors.Error
+
+	if errors.As(err, &terror) {
+		logError(r.URL.Path, terror)
+		WriteJSON(w, terror.Code, map[string]string{"error": terror.Msg})
+
+		return
 	}
 
-	return nil
+	log.Printf("err: %v", err)
+	WriteJSON(w, http.StatusInternalServerError, terrors.InternalServerError)
+}
+
+func logError(path string, err *terrors.Error) {
+	if err.Err != nil {
+		log.Printf("path: %s, code: %d, msg: %s, err: %v", path, err.Code, err.Msg, err.Err)
+	} else {
+		log.Printf("path: %s, code: %d, msg: %s", path, err.Code, err.Msg)
+	}
 }
 
 // WriteJSON writes a JSON response to a HTTP request.
-func WriteJSON(w http.ResponseWriter, code int, payload interface{}) error {
+func WriteJSON(w http.ResponseWriter, code int, payload interface{}) {
 	response, _ := json.Marshal(payload)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	_, err := w.Write(response)
-	if err != nil {
-		return err
+
+	if _, err := w.Write(response); err != nil {
+		log.Printf("failed to write response: %v", err)
 	}
 
-	return nil
+	return
+}
+
+func WriteOK(w http.ResponseWriter) {
+	WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 type HealthStatus struct {
@@ -67,7 +90,7 @@ type HealthStatus struct {
 }
 
 func (tr *transport) HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	_ = WriteJSON(w, http.StatusOK, HealthStatus{Status: "ok"})
+	WriteJSON(w, http.StatusOK, HealthStatus{Status: "ok"})
 }
 
 func (tr *transport) RegisterRoutes(r chi.Router) {
@@ -101,6 +124,8 @@ func ApiRoutes(tr *transport) http.Handler {
 		r.Get("/contacts/saved", tr.ListSavedContactsHandler)
 		r.Post("/contacts/{id}/save", tr.SaveContactHandler)
 		r.Delete("/contacts/{id}/save", tr.DeleteSavedContactHandler)
+
+		r.Post("/uploads/get-url", tr.GetUploadURLHandler)
 	})
 
 	return r
