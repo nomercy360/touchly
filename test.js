@@ -324,9 +324,80 @@ describe('API Test', () => {
         });
     }
 
+    it('GET /contacts/:contactId', async () => {
+        await spec()
+            .get(API_URL + '/contacts/$S{firstContactId}')
+            .expectStatus(200)
+            .expectJsonSchema({
+                type: 'object',
+                required: ['id', 'name', 'avatar', 'activity_name', 'about', 'website', 'country_code', 'phone_number', 'phone_calling_code', 'email', 'user_id', 'tags', 'social_links', 'views_amount', 'saves_amount', 'is_published']
+            })
+            .expectJsonMatch({
+                id: '$S{firstContactId}',
+                name: firstContact.name,
+                avatar: firstContact.avatar,
+                activity_name: firstContact.activity_name,
+                about: firstContact.about,
+                website: firstContact.website,
+                country_code: firstContact.country_code,
+                phone_number: firstContact.phone_number,
+                phone_calling_code: firstContact.phone_calling_code,
+                email: firstContact.email,
+                tags: firstContact.tags,
+                social_links: firstContact.social_links,
+                views_amount: 0,
+                saves_amount: 0,
+                user_id: '$S{userId}',
+                is_published: false,
+            });
+    });
+
+    const firstContactUpdate = {
+        name: faker.person.fullName(),
+        avatar: faker.image.avatar(),
+        activity_name: faker.company.name(),
+        website: faker.internet.url(),
+        tags: [
+            {id: '$S{secondTagId}'}
+        ],
+        social_links: [
+            {type: 'instagram', link: faker.internet.url()},
+            {type: 'facebook', link: faker.internet.url()},
+            {type: 'twitter', link: faker.internet.url()}
+        ]
+    }
+
+    it('PUT /contacts/:contactId', async () => {
+        await spec()
+            .put(API_URL + '/contacts/$S{firstContactId}')
+            .withJson(firstContactUpdate)
+            .withBearerToken('$S{token}')
+            .expectStatus(200)
+            .expectJsonSchema({
+                type: 'object',
+                required: ['id', 'name', 'avatar', 'activity_name', 'about', 'website', 'country_code', 'phone_number', 'phone_calling_code', 'email', 'user_id', 'tags', 'social_links', 'views_amount', 'saves_amount', 'is_published']
+            })
+            .expectJsonMatch({
+                name: firstContactUpdate.name,
+                avatar: firstContactUpdate.avatar,
+                activity_name: firstContactUpdate.activity_name,
+                about: firstContact.about,
+                website: firstContactUpdate.website,
+                country_code: firstContact.country_code,
+                phone_number: firstContact.phone_number,
+                phone_calling_code: firstContact.phone_calling_code,
+                email: firstContact.email,
+                tags: firstContactUpdate.tags,
+                social_links: firstContactUpdate.social_links,
+                views_amount: 0,
+                saves_amount: 0,
+                user_id: '$S{userId}',
+                is_published: false,
+            });
+    });
+
+
     it('POST /uploads/get-url', async () => {
-
-
         const fileName = faker.system.commonFileName('png');
 
         await spec()

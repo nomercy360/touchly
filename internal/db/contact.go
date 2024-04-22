@@ -289,64 +289,103 @@ func (s *storage) DeleteContact(userID, id int64) error {
 	return nil
 }
 
-func (s *storage) UpdateContact(contact Contact) error {
+func (s *storage) UpdateContact(id int64, tags *[]Tag, links *[]Link, updates map[string]interface{}) (*Contact, error) {
 	tx, err := s.pg.Beginx()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer tx.Rollback()
 
-	query := `
-		UPDATE contacts
-		SET name=$1, avatar=$2, activity_name=$3, about=$4, website=$5, country_code=$6, phone_number=$7, phone_calling_code=$8, email=$9
-		WHERE id=$10
-	`
+	baseQuery := "UPDATE contacts SET "
+	var setClauses = []string{"updated_at = now()"}
+	var queryParams = map[string]any{
+		"id": id,
+	}
 
-	_, err = tx.Exec(query, contact.Name, contact.Avatar, contact.ActivityName, contact.About, contact.Address, contact.PhoneNumber, contact.Email, contact.ID)
+	for key, value := range updates {
+		paramName := fmt.Sprintf("%s", key)
+		setClauses = append(setClauses, fmt.Sprintf("%s = :%s", key, paramName))
+		queryParams[paramName] = value
+	}
+
+	query := baseQuery + strings.Join(setClauses, ", ") + " WHERE id = :id RETURNING *;"
+
+	var contact Contact
+
+	rows, err := s.pg.NamedQuery(query, queryParams)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		err = rows.StructScan(&contact)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if tags != nil {
+		_, err = tx.Exec("DELETE FROM contact_tags WHERE contact_id=$1", id)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, tag := range *tags {
+			_, err = tx.Exec("INSERT INTO contact_tags (contact_id, tag_id) VALUES ($1, $2)", id, tag.ID)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if links != nil {
+		_, err = tx.Exec("DELETE FROM social_media_links WHERE contact_id=$1", id)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, link := range *links {
+			_, err = tx.Exec("INSERT INTO social_media_links (contact_id, type, link) VALUES ($1, $2, $3)", id, link.Type, link.Link)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	tagsUpdated := make([]Tag, 0)
+	err = tx.Select(&tagsUpdated, "SELECT t.id, t.name FROM tags t JOIN contact_tags ct ON t.id = ct.tag_id WHERE ct.contact_id=$1", id)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// Update tags
-	if len(contact.Tags) > 0 {
-		if _, err := tx.Exec("DELETE FROM contact_tags WHERE contact_id=$1", contact.ID); err != nil {
-			return err
-		}
+	contact.Tags = tagsUpdated
 
-		for _, tag := range contact.Tags {
-			if _, err := tx.Exec("INSERT INTO contact_tags (contact_id, tag_id) VALUES ($1, $2)", contact.ID, tag.ID); err != nil {
-				return err
-			}
-		}
+	linksUpdated := make([]Link, 0)
+	err = tx.Select(&linksUpdated, "SELECT id, type, link FROM social_media_links WHERE contact_id=$1", id)
+
+	if err != nil {
+		return nil, err
 	}
 
-	// Update social links
-	if len(contact.SocialLinks) > 0 {
-		if _, err := tx.Exec("DELETE FROM social_media_links WHERE contact_id=$1", contact.ID); err != nil {
-			return err
-		}
-
-		for _, link := range contact.SocialLinks {
-			if _, err := tx.Exec("INSERT INTO social_media_links (contact_id, type, link) VALUES ($1, $2, $3)", contact.ID, link.Type, link.Link); err != nil {
-				return err
-			}
-		}
-	}
+	contact.SocialLinks = linksUpdated
 
 	if err = tx.Commit(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &contact, nil
 }
 
 func (s *storage) GetContact(id int64) (*Contact, error) {
 	var contact Contact
 
 	query := `
-		SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount, c.saves_amount, c.created_at, c.updated_at, c.phone_number, c.email, c.user_id
+		SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount,
+		       c.saves_amount, c.created_at, c.updated_at, c.phone_number, c.email,
+		       c.user_id, c.is_published, c.country_code, c.phone_calling_code, c.website, c.deleted_at
 		FROM contacts c
 		WHERE c.id=$1
 	`

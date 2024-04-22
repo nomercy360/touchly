@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	api2 "touchly/internal/api"
 	"touchly/internal/db"
 )
 
@@ -89,21 +90,23 @@ func (tr *transport) GetContactHandler(w http.ResponseWriter, r *http.Request) {
 // @Security     JWT
 // @Router       /api/contacts/{id} [put]
 func (tr *transport) UpdateContactHandler(w http.ResponseWriter, r *http.Request) {
-	var contact db.Contact
+	var contact api2.UpdateContactRequest
 	if err := decodeRequest(r, &contact); err != nil {
 		WriteError(r, w, err)
 		return
 	}
 
 	userID := getUserIDFromRequest(r)
+	cID, _ := getIDFromRequest(r)
 
-	err := tr.api.UpdateContact(userID, contact)
+	res, err := tr.api.UpdateContact(userID, cID, contact)
+
 	if err != nil {
 		WriteError(r, w, err)
 		return
 	}
 
-	WriteOK(w)
+	WriteJSON(w, http.StatusOK, res)
 }
 
 // DeleteContactHandler godoc

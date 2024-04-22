@@ -31,7 +31,7 @@ type api interface {
 	ListContacts(tagIDs []int, search string, lat float64, lng float64, radius int, page, pageSize int) (db.ContactsPage, error)
 	CreateContact(userID int64, contact db.Contact) (*db.Contact, error)
 	GetContact(id int64) (*db.Contact, error)
-	UpdateContact(userID int64, contact db.Contact) error
+	UpdateContact(userID, contactID int64, contact api2.UpdateContactRequest) (*db.Contact, error)
 	DeleteContact(userID, id int64) error
 
 	CreateContactAddress(userID int64, address db.Address) (*db.Address, error)
@@ -133,7 +133,9 @@ func ApiRoutes(tr *transport) http.Handler {
 		r.Get("/contacts/saved", tr.ListSavedContactsHandler)
 		r.Post("/contacts/{id}/save", tr.SaveContactHandler)
 		r.Delete("/contacts/{id}/save", tr.DeleteSavedContactHandler)
+
 		r.Post("/contacts/{id}/address", tr.CreateContactAddressHandler)
+		r.Put("/contacts/{id}", tr.UpdateContactHandler)
 
 		r.Post("/uploads/get-url", tr.GetUploadURLHandler)
 	})
