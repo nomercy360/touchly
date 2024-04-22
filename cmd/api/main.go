@@ -9,7 +9,8 @@ import (
 	"net/http"
 	"os"
 	_ "touchly/docs"
-	admSvc "touchly/internal/api"
+	"touchly/internal/admin"
+	"touchly/internal/api"
 	"touchly/internal/db"
 	"touchly/internal/services"
 	"touchly/internal/storage"
@@ -89,9 +90,10 @@ func main() {
 	s3Client, err := storage.NewS3Client(
 		config.AWS.AccessKeyID, config.AWS.SecretAccessKey, config.AWS.AccountId, config.AWS.Bucket)
 
-	api := admSvc.NewApi(pg, email, s3Client)
+	apiSvc := api.NewApi(pg, email, s3Client)
+	adminSvc := admin.NewAdmin(pg)
 
-	app := transport.New(api, config.JWTSecret)
+	app := transport.New(apiSvc, adminSvc, config.JWTSecret)
 
 	r.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"), //The url pointing to API definition"

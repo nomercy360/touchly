@@ -16,6 +16,8 @@ type Contact struct {
 	Name             string     `db:"name" json:"name"`
 	Avatar           *string    `db:"avatar" json:"avatar"`
 	ActivityName     *string    `db:"activity_name" json:"activity_name"`
+	Website          *string    `db:"website" json:"website"`
+	CountryCode      *string    `db:"country_code" json:"country_code"`
 	About            *string    `db:"about" json:"about"`
 	ViewsAmount      int        `db:"views_amount" json:"views_amount"`
 	SavesAmount      int        `db:"saves_amount" json:"saves_amount"`
@@ -122,7 +124,9 @@ type Address struct {
 	DeletedAt  *time.Time `db:"deleted_at" json:"deleted_at"`
 }
 
-func (s *storage) ListContacts(tagIDs []int, search string, page, pageSize int) (ContactsPage, error) {
+func (s *storage) ListContacts(
+	tagIDs []int, search string, lat float64, lng float64, radius int, page, pageSize int) (ContactsPage, error) {
+
 	contactsPage := ContactsPage{
 		Page:     page,
 		PageSize: pageSize,
@@ -146,6 +150,15 @@ func (s *storage) ListContacts(tagIDs []int, search string, page, pageSize int) 
 		paramIndex++
 	}
 
+	if lat != 0 && lng != 0 {
+		point := fmt.Sprintf("ST_SetSRID(ST_Point(%f, %f), 4326)", lng, lat)
+
+		geoClause := fmt.Sprintf("ST_DWithin(a.location, %s, $%d)", point, paramIndex)
+		whereClauses = append(whereClauses, geoClause)
+		args = append(args, radius*1000) // Convert km to meters
+		paramIndex++
+	}
+
 	where := ""
 	if len(whereClauses) > 0 {
 		where = " WHERE " + strings.Join(whereClauses, " AND ")
@@ -154,6 +167,10 @@ func (s *storage) ListContacts(tagIDs []int, search string, page, pageSize int) 
 	countQuery := `SELECT COUNT(*) FROM contacts c`
 	if len(tagIDs) > 0 {
 		countQuery += ` JOIN contact_tags ct ON c.id = ct.contact_id`
+	}
+
+	if lat != 0 && lng != 0 {
+		countQuery += ` JOIN addresses a ON c.id = a.contact_id`
 	}
 
 	countQuery += where
@@ -168,6 +185,10 @@ func (s *storage) ListContacts(tagIDs []int, search string, page, pageSize int) 
 
 	if len(tagIDs) > 0 {
 		selectQuery += ` JOIN contact_tags ct ON c.id = ct.contact_id`
+	}
+
+	if lat != 0 && lng != 0 {
+		selectQuery += ` JOIN addresses a ON c.id = a.contact_id`
 	}
 
 	selectQuery += where
@@ -215,10 +236,11 @@ func (s *storage) CreateContact(contact Contact) (*Contact, error) {
 	query := `
 		INSERT INTO contacts
 		    (name, avatar, activity_name, about, website, country_code, deleted_at, phone_number, phone_calling_code, email, user_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		RETURNING id
 	`
 
-	err = tx.QueryRow(query, contact.Name, contact.Avatar, contact.ActivityName, contact.About, contact.Address, contact.PhoneNumber, contact.Email).Scan(&contactID)
+	err = tx.QueryRow(query, contact.Name, contact.Avatar, contact.ActivityName, contact.About, contact.Website, contact.CountryCode, contact.DeletedAt, contact.PhoneNumber, contact.PhoneCallingCode, contact.Email, contact.UserID).Scan(&contactID)
 
 	if err != nil {
 		return nil, err
@@ -361,6 +383,10 @@ func (s *storage) GetContact(id int64) (*Contact, error) {
 	err = s.pg.Get(&address, "SELECT id, external_id, contact_id, label, name, ST_AsText(location) as location, created_at, updated_at, deleted_at FROM addresses WHERE contact_id=$1", id)
 
 	if err != nil {
+		if IsNoRowsError(err) {
+			return &contact, nil
+		}
+
 		return nil, err
 	}
 
@@ -405,4 +431,21 @@ func (s *storage) ListSavedContacts(userID int64) ([]Contact, error) {
 	}
 
 	return contacts, nil
+}
+
+func (s *storage) CreateContactAddress(address Address) (*Address, error) {
+	query := `
+		INSERT INTO addresses
+			(external_id, contact_id, label, name, location)
+		VALUES ($1, $2, $3, $4, ST_SetSRID(ST_Point($5, $6), 4326))
+		RETURNING id
+	`
+
+	err := s.pg.QueryRow(query, address.ExternalID, address.ContactID, address.Label, address.Name, address.Location.Lat, address.Location.Lng).Scan(&address.ID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &address, nil
 }

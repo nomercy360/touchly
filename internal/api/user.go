@@ -40,7 +40,7 @@ func (api *api) LoginUser(email, password string) (*string, error) {
 		return nil, err
 	}
 
-	if !user.EmailVerified || user.PasswordHash == nil {
+	if user.EmailVerifiedAt == nil || user.PasswordHash == nil {
 		return nil, errors.New("invalid credentials")
 	}
 
@@ -71,8 +71,8 @@ func (api *api) SendOTP(email string) error {
 	if err != nil {
 		if db.IsNoRowsError(err) {
 			u := db.User{
-				Email:         email,
-				EmailVerified: false,
+				Email:           email,
+				EmailVerifiedAt: nil,
 			}
 
 			user, err = api.storage.CreateUser(u)

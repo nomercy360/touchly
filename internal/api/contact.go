@@ -39,7 +39,7 @@ func (api *api) UpdateContact(userID int64, contact db.Contact) error {
 	return nil
 }
 
-func (api *api) ListContacts(tagIDs []int, search string, page, pageSize int) (db.ContactsPage, error) {
+func (api *api) ListContacts(tagIDs []int, search string, lat float64, lng float64, radius int, page, pageSize int) (db.ContactsPage, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -48,7 +48,13 @@ func (api *api) ListContacts(tagIDs []int, search string, page, pageSize int) (d
 		pageSize = 20
 	}
 
-	contacts, err := api.storage.ListContacts(tagIDs, search, page, pageSize)
+	if lat != 0 && lng != 0 {
+		if radius < 1 {
+			return db.ContactsPage{}, terrors.InvalidRequest(nil, "radius is required")
+		}
+	}
+
+	contacts, err := api.storage.ListContacts(tagIDs, search, lat, lng, radius, page, pageSize)
 
 	if err != nil {
 		return contacts, terrors.InternalServerError(err, "failed to list contacts")
@@ -91,4 +97,28 @@ func (api *api) ListSavedContacts(userID int64) ([]db.Contact, error) {
 	}
 
 	return contacts, nil
+}
+
+func (api *api) CreateContactAddress(userID int64, address db.Address) (*db.Address, error) {
+	if address.ContactID == 0 {
+		return nil, terrors.InvalidRequest(nil, "contact id is required")
+	}
+
+	contact, err := api.storage.GetContact(address.ContactID)
+
+	if err != nil {
+		return nil, terrors.InternalServerError(err, "failed to get contact")
+	}
+
+	if contact.UserID != userID {
+		return nil, terrors.Forbidden(nil, "contact does not belong to user")
+	}
+
+	res, err := api.storage.CreateContactAddress(address)
+
+	if err != nil {
+		return nil, terrors.InternalServerError(err, "failed to create contact address")
+	}
+
+	return res, nil
 }

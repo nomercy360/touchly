@@ -31,19 +31,19 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "page number",
+                        "description": "page number (default 1)",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "description": "page size",
+                        "description": "page size (default 20)",
                         "name": "page_size",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "search query",
+                        "description": "search query, search by name or activity",
                         "name": "search",
                         "in": "query"
                     },
@@ -55,6 +55,24 @@ const docTemplate = `{
                         "collectionFormat": "csv",
                         "description": "tag id",
                         "name": "tag",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "latitude",
+                        "name": "lat",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "longitude",
+                        "name": "lng",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "radius in km",
+                        "name": "radius",
                         "in": "query"
                     }
                 ],

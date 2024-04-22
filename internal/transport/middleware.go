@@ -49,3 +49,18 @@ func WithAuth(jwtSecret string) func(handler http.Handler) http.Handler {
 		})
 	}
 }
+
+func WithAdminAuth(secret string) func(handler http.Handler) http.Handler {
+	return func(handler http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			auth := r.Header.Get("X-Api-Key")
+
+			if auth != secret {
+				WriteError(r, w, terrors.Unauthorized(nil, "invalid token"))
+				return
+			}
+
+			handler.ServeHTTP(w, r)
+		})
+	}
+}

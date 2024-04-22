@@ -24,11 +24,12 @@ type storage interface {
 	CreateContact(contact db.Contact) (*db.Contact, error)
 	DeleteContact(userID, id int64) error
 	UpdateContact(contact db.Contact) error
-	ListContacts(tagIDs []int, search string, page, pageSize int) (db.ContactsPage, error)
+	ListContacts(tagIDs []int, search string, lat float64, lng float64, radius int, page, pageSize int) (db.ContactsPage, error)
 	GetContact(id int64) (*db.Contact, error)
 	SaveContact(userID, contactID int64) error
 	DeleteSavedContact(userID, contactID int64) error
 	ListSavedContacts(userID int64) ([]db.Contact, error)
+	CreateContactAddress(address db.Address) (*db.Address, error)
 
 	ListTags() ([]db.Tag, error)
 	CreateTag(tag db.Tag) (*db.Tag, error)

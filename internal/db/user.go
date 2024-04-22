@@ -3,12 +3,13 @@ package db
 import "time"
 
 type User struct {
-	ID            int64     `db:"id" json:"id"`
-	Email         string    `db:"email" json:"email"`
-	PasswordHash  *string   `db:"password_hash" json:"-"`
-	CreatedAt     time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt     time.Time `db:"updated_at" json:"updated_at"`
-	EmailVerified bool      `db:"email_verified" json:"email_verified"`
+	ID              int64      `db:"id" json:"id"`
+	Email           string     `db:"email" json:"email"`
+	PasswordHash    *string    `db:"password_hash" json:"-"`
+	CreatedAt       time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt       time.Time  `db:"updated_at" json:"updated_at"`
+	EmailVerifiedAt *time.Time `db:"email_verified_at" json:"email_verified_at"`
+	DeleteAt        *time.Time `db:"deleted_at" json:"deleted_at"`
 }
 
 type OTP struct {
@@ -23,12 +24,12 @@ type OTP struct {
 func (s *storage) CreateUser(user User) (*User, error) {
 	query := `
 		INSERT INTO users
-		   (email, password_hash, created_at, updated_at, email_verified)
+		   (email, password_hash, created_at, updated_at, email_verified_at)
 		VALUES ($1, $2, NOW(), NOW(), $3)
-		RETURNING id, email, password_hash, created_at, updated_at, email_verified
+		RETURNING id, email, password_hash, created_at, updated_at, email_verified_at, deleted_at
 	`
 
-	err := s.pg.QueryRowx(query, user.Email, user.PasswordHash, user.EmailVerified).StructScan(&user)
+	err := s.pg.QueryRowx(query, user.Email, user.PasswordHash, user.EmailVerifiedAt).StructScan(&user)
 
 	if err != nil {
 		return nil, err
@@ -41,7 +42,7 @@ func (s *storage) GetUserByEmail(email string) (*User, error) {
 	var user User
 
 	query := `
-		SELECT id, email, password_hash, created_at, updated_at, email_verified
+		SELECT id, email, password_hash, created_at, updated_at, email_verified_at, deleted_at
 		FROM users
 		WHERE email = $1
 	`
@@ -60,7 +61,7 @@ func (s *storage) UpdateUserPassword(email, password string) error {
 		UPDATE users
 		SET password_hash = $1
 		WHERE email = $2
-		AND email_verified = true
+		AND email_verified_at IS NOT NULL
 		AND password_hash IS NULL
 	`
 
@@ -94,7 +95,7 @@ func (s *storage) SetOTPIsUsed(otpID int64) error {
 func (s *storage) UpdateUserVerified(userID int64) error {
 	query := `
 		UPDATE users
-		SET email_verified = true
+		SET email_verified_at = NOW()
 		WHERE id = $1
 	`
 
@@ -144,7 +145,7 @@ func (s *storage) GetUserByID(userID int64) (*User, error) {
 	var user User
 
 	query := `
-		SELECT id, email, password_hash, created_at, updated_at, email_verified
+		SELECT id, email, password_hash, created_at, updated_at, email_verified_at, deleted_at
 		FROM users
 		WHERE id = $1
 	`

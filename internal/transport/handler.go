@@ -13,7 +13,12 @@ import (
 
 type transport struct {
 	api       api
+	admin     admin
 	jwtSecret string
+}
+
+type admin interface {
+	CreateUser(email, password string) error
 }
 
 type api interface {
@@ -23,11 +28,13 @@ type api interface {
 	SetPassword(email, password string) error
 	GetUserByID(userID int64) (*db.User, error)
 
-	ListContacts(tagIDs []int, search string, page, pageSize int) (db.ContactsPage, error)
+	ListContacts(tagIDs []int, search string, lat float64, lng float64, radius int, page, pageSize int) (db.ContactsPage, error)
 	CreateContact(userID int64, contact db.Contact) (*db.Contact, error)
 	GetContact(id int64) (*db.Contact, error)
 	UpdateContact(userID int64, contact db.Contact) error
 	DeleteContact(userID, id int64) error
+
+	CreateContactAddress(userID int64, address db.Address) (*db.Address, error)
 
 	ListTags() ([]db.Tag, error)
 	CreateTag(tag db.Tag) (*db.Tag, error)
@@ -40,8 +47,8 @@ type api interface {
 	GetPresignedURL(userID int64, filename string) (*api2.UploadURL, error)
 }
 
-func New(api api, jwtSecret string) *transport {
-	return &transport{api: api, jwtSecret: jwtSecret}
+func New(api api, admin admin, jwtSecret string) *transport {
+	return &transport{api: api, admin: admin, jwtSecret: jwtSecret}
 }
 
 // WriteError responds to a HTTP request with an error.
@@ -97,6 +104,8 @@ func (tr *transport) RegisterRoutes(r chi.Router) {
 	r.Get("/health", tr.HealthCheckHandler)
 
 	r.Mount("/api", ApiRoutes(tr))
+
+	r.Mount("/admin", AdminRoutes(tr))
 }
 
 func ApiRoutes(tr *transport) http.Handler {
@@ -124,9 +133,20 @@ func ApiRoutes(tr *transport) http.Handler {
 		r.Get("/contacts/saved", tr.ListSavedContactsHandler)
 		r.Post("/contacts/{id}/save", tr.SaveContactHandler)
 		r.Delete("/contacts/{id}/save", tr.DeleteSavedContactHandler)
+		r.Post("/contacts/{id}/address", tr.CreateContactAddressHandler)
 
 		r.Post("/uploads/get-url", tr.GetUploadURLHandler)
 	})
+
+	return r
+}
+
+func AdminRoutes(tr *transport) http.Handler {
+	r := chi.NewRouter()
+
+	r.Use(WithAdminAuth("secret"))
+
+	r.Post("/users", tr.CreateUserHandler)
 
 	return r
 }

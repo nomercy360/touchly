@@ -2,12 +2,13 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 
 CREATE TABLE users
 (
-    id             SERIAL PRIMARY KEY,
-    email          VARCHAR(255) UNIQUE NOT NULL,
-    password_hash  VARCHAR(255),
-    created_at     TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at     TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    email_verified BOOLEAN             NOT NULL DEFAULT FALSE
+    id                SERIAL PRIMARY KEY,
+    email             VARCHAR(255) UNIQUE NOT NULL,
+    password_hash     VARCHAR(255),
+    created_at        TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    email_verified_at TIMESTAMP,
+    deleted_at        TIMESTAMP
 );
 
 CREATE TABLE otps

@@ -162,10 +162,13 @@ func queryToIntArray(query string) ([]int, error) {
 // @Accept       json
 // @Produce      json
 // @Success      200  {object} db.ContactsPage
-// @Param        page      query    int     false  "page number"
-// @Param        page_size query    int     false  "page size"
-// @Param		 search    query    string  false  "search query"
+// @Param        page      query    int     false  "page number (default 1)"
+// @Param        page_size query    int     false  "page size (default 20)"
+// @Param		 search    query    string  false  "search query, search by name or activity"
 // @Param		 tag       query    []int   false  "tag id"
+// @Param 		 lat       query    float64 false  "latitude"
+// @Param		 lng       query    float64 false  "longitude"
+// @Param        radius    query    int     false  "radius in km"
 // @Router       /api/contacts [get]
 func (tr *transport) ListContactsHandler(w http.ResponseWriter, r *http.Request) {
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -177,7 +180,12 @@ func (tr *transport) ListContactsHandler(w http.ResponseWriter, r *http.Request)
 
 	tagIDs, _ := queryToIntArray(tags)
 
-	contacts, err := tr.api.ListContacts(tagIDs, search, page, pageSize)
+	lat, _ := strconv.ParseFloat(r.URL.Query().Get("lat"), 64)
+	lng, _ := strconv.ParseFloat(r.URL.Query().Get("lng"), 64)
+
+	radius, _ := strconv.Atoi(r.URL.Query().Get("radius"))
+
+	contacts, err := tr.api.ListContacts(tagIDs, search, lat, lng, radius, page, pageSize)
 
 	if err != nil {
 		WriteError(r, w, err)
@@ -276,4 +284,25 @@ func (tr *transport) DeleteSavedContactHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	WriteOK(w)
+}
+
+func (tr *transport) CreateContactAddressHandler(w http.ResponseWriter, r *http.Request) {
+	var address db.Address
+	if err := decodeRequest(r, &address); err != nil {
+		WriteError(r, w, err)
+		return
+	}
+
+	userID := getUserIDFromRequest(r)
+	contactID, _ := getIDFromRequest(r)
+
+	address.ContactID = contactID
+
+	createdAddress, err := tr.api.CreateContactAddress(userID, address)
+	if err != nil {
+		WriteError(r, w, err)
+		return
+	}
+
+	WriteJSON(w, http.StatusCreated, createdAddress)
 }

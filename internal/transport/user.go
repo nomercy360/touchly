@@ -153,3 +153,26 @@ func (tr *transport) GetMeHandler(w http.ResponseWriter, r *http.Request) {
 
 	WriteJSON(w, http.StatusOK, user)
 }
+
+type CreateUserRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func (tr *transport) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
+	var req CreateUserRequest
+
+	if err := decodeRequest(r, &req); err != nil {
+		WriteError(r, w, err)
+		return
+	}
+
+	err := tr.admin.CreateUser(req.Email, req.Password)
+
+	if err != nil {
+		WriteError(r, w, err)
+		return
+	}
+
+	WriteJSON(w, http.StatusCreated, map[string]string{"status": "ok"})
+}

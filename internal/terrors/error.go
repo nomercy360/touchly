@@ -46,3 +46,11 @@ func InvalidRequest(err error, msg string) *Error {
 		Err:  err,
 	}
 }
+
+func Forbidden(err error, msg string) *Error {
+	return &Error{
+		Code: http.StatusForbidden,
+		Msg:  msg,
+		Err:  err,
+	}
+}
