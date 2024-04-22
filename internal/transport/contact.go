@@ -22,7 +22,13 @@ func getIDFromRequest(r *http.Request) (int64, error) {
 func getUserIDFromRequest(r *http.Request) int64 {
 	ctx := r.Context()
 
-	return ctx.Value("userID").(int64)
+	userID := ctx.Value("userID")
+
+	if userID == nil {
+		return 0
+	}
+
+	return userID.(int64)
 }
 
 // CreateContactHandler godoc
@@ -63,13 +69,10 @@ func (tr *transport) CreateContactHandler(w http.ResponseWriter, r *http.Request
 // @Success      200  {object}   db.Contact
 // @Router       /api/contacts/{id} [get]
 func (tr *transport) GetContactHandler(w http.ResponseWriter, r *http.Request) {
-	id, err := getIDFromRequest(r)
-	if err != nil {
-		WriteError(r, w, err)
-		return
-	}
+	id, _ := getIDFromRequest(r)
+	userID := getUserIDFromRequest(r)
 
-	contact, err := tr.api.GetContact(id)
+	contact, err := tr.api.GetContact(userID, id)
 
 	if err != nil {
 		WriteError(r, w, err)
@@ -182,13 +185,14 @@ func (tr *transport) ListContactsHandler(w http.ResponseWriter, r *http.Request)
 	tags := r.URL.Query().Get("tag")
 
 	tagIDs, _ := queryToIntArray(tags)
+	userID := getUserIDFromRequest(r)
 
 	lat, _ := strconv.ParseFloat(r.URL.Query().Get("lat"), 64)
 	lng, _ := strconv.ParseFloat(r.URL.Query().Get("lng"), 64)
 
 	radius, _ := strconv.Atoi(r.URL.Query().Get("radius"))
 
-	contacts, err := tr.api.ListContacts(tagIDs, search, lat, lng, radius, page, pageSize)
+	contacts, err := tr.api.ListContacts(userID, tagIDs, search, lat, lng, radius, page, pageSize)
 
 	if err != nil {
 		WriteError(r, w, err)
@@ -319,4 +323,61 @@ func (tr *transport) CreateContactAddressHandler(w http.ResponseWriter, r *http.
 	}
 
 	WriteJSON(w, http.StatusCreated, createdAddress)
+}
+
+type UpdateContactVisibilityRequest struct {
+	Visibility db.ContactVisibility `json:"visibility" example:"public"`
+}
+
+// UpdateContactVisibilityHandler godoc
+// @Summary      Update contact visibility
+// @Description  update contact visibility
+// @Tags         contacts
+// @Accept       json
+// @Produce      json
+// @Param        id   path     int     true  "contact id"
+// @Param		 account	   body	   transport.UpdateContactVisibilityRequest	true	"visibility"
+// @Success      200  {object}   nil
+// @Security     JWT
+// @Router       /api/contacts/{id}/visibility [put]
+func (tr *transport) UpdateContactVisibilityHandler(w http.ResponseWriter, r *http.Request) {
+	var data UpdateContactVisibilityRequest
+	if err := decodeRequest(r, &data); err != nil {
+		WriteError(r, w, err)
+		return
+	}
+
+	userID := getUserIDFromRequest(r)
+	cID, _ := getIDFromRequest(r)
+
+	err := tr.api.UpdateContactVisibility(userID, cID, data.Visibility)
+
+	if err != nil {
+		WriteError(r, w, err)
+		return
+	}
+
+	WriteOK(w)
+}
+
+// ListMyContactsHandler godoc
+// @Summary      List my contacts
+// @Description  get my contacts
+// @Tags         contacts
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} db.ContactsPage
+// @Security     JWT
+// @Router       /api/me/contacts [get]
+func (tr *transport) ListMyContactsHandler(w http.ResponseWriter, r *http.Request) {
+	userID := getUserIDFromRequest(r)
+
+	contacts, err := tr.api.ListMyContacts(userID)
+
+	if err != nil {
+		WriteError(r, w, err)
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, contacts)
 }

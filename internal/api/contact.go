@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"touchly/internal/db"
 	"touchly/internal/terrors"
 )
@@ -41,7 +42,6 @@ type UpdateContactRequest struct {
 	Email            *string    `db:"email" json:"email"`
 	Tags             *[]db.Tag  `db:"-" json:"tags,omitempty"`
 	SocialLinks      *[]db.Link `db:"-" json:"social_links,omitempty"`
-	IsPublished      *bool      `db:"is_published" json:"is_published"`
 }
 
 func collectUpdates(contact UpdateContactRequest) map[string]interface{} {
@@ -83,17 +83,13 @@ func collectUpdates(contact UpdateContactRequest) map[string]interface{} {
 		updates["email"] = *contact.Email
 	}
 
-	if contact.IsPublished != nil {
-		updates["is_published"] = *contact.IsPublished
-	}
-
 	return updates
 }
 
-func (api *api) UpdateContact(contactID, userID int64, request UpdateContactRequest) (*db.Contact, error) {
+func (api *api) UpdateContact(userID, contactID int64, request UpdateContactRequest) (*db.Contact, error) {
 	updates := collectUpdates(request)
 
-	res, err := api.storage.UpdateContact(contactID, request.Tags, request.SocialLinks, updates)
+	res, err := api.storage.UpdateContact(userID, contactID, request.Tags, request.SocialLinks, updates)
 
 	if err != nil {
 		return nil, terrors.InternalServerError(err, "failed to update contact")
@@ -102,7 +98,7 @@ func (api *api) UpdateContact(contactID, userID int64, request UpdateContactRequ
 	return res, nil
 }
 
-func (api *api) ListContacts(tagIDs []int, search string, lat float64, lng float64, radius int, page, pageSize int) (db.ContactsPage, error) {
+func (api *api) ListContacts(userID int64, tagIDs []int, search string, lat float64, lng float64, radius int, page, pageSize int) (db.ContactsPage, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -117,7 +113,7 @@ func (api *api) ListContacts(tagIDs []int, search string, lat float64, lng float
 		}
 	}
 
-	contacts, err := api.storage.ListContacts(tagIDs, search, lat, lng, radius, page, pageSize)
+	contacts, err := api.storage.ListContacts(userID, tagIDs, search, lat, lng, radius, page, pageSize)
 
 	if err != nil {
 		return contacts, terrors.InternalServerError(err, "failed to list contacts")
@@ -126,10 +122,14 @@ func (api *api) ListContacts(tagIDs []int, search string, lat float64, lng float
 	return contacts, nil
 }
 
-func (api *api) GetContact(id int64) (*db.Contact, error) {
-	contact, err := api.storage.GetContact(id)
+func (api *api) GetContact(userID, id int64) (*db.Contact, error) {
+	contact, err := api.storage.GetContact(userID, id)
 
 	if err != nil {
+		if db.IsNoRowsError(err) {
+			return nil, terrors.NotFound(fmt.Errorf("contact not found"), "contact not found")
+		}
+
 		return nil, terrors.InternalServerError(err, "failed to get contact")
 	}
 
@@ -167,9 +167,13 @@ func (api *api) CreateContactAddress(userID int64, address db.Address) (*db.Addr
 		return nil, terrors.InvalidRequest(nil, "contact id is required")
 	}
 
-	contact, err := api.storage.GetContact(address.ContactID)
+	contact, err := api.storage.GetContact(userID, address.ContactID)
 
 	if err != nil {
+		if db.IsNoRowsError(err) {
+			return nil, terrors.NotFound(err, "contact not found")
+		}
+
 		return nil, terrors.InternalServerError(err, "failed to get contact")
 	}
 
@@ -184,4 +188,26 @@ func (api *api) CreateContactAddress(userID int64, address db.Address) (*db.Addr
 	}
 
 	return res, nil
+}
+
+func (api *api) UpdateContactVisibility(userID, contactID int64, visibility db.ContactVisibility) error {
+	if !visibility.IsValid() {
+		return terrors.InvalidRequest(nil, "invalid visibility value")
+	}
+
+	if err := api.storage.UpdateContactVisibility(userID, contactID, visibility); err != nil {
+		return terrors.InternalServerError(err, "failed to update contact visibility")
+	}
+
+	return nil
+}
+
+func (api *api) ListMyContacts(userID int64) (db.ContactsPage, error) {
+	contacts, err := api.storage.GetContactsByUserID(userID)
+
+	if err != nil {
+		return db.ContactsPage{}, terrors.InternalServerError(err, "failed to get contacts")
+	}
+
+	return contacts, nil
 }

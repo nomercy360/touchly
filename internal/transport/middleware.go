@@ -18,15 +18,21 @@ func parseToken(authorizationHeader string) (string, error) {
 	return "", fmt.Errorf("not a bearer authorization")
 }
 
-func WithAuth(jwtSecret string) func(handler http.Handler) http.Handler {
+func WithAuth(jwtSecret string, required bool) func(handler http.Handler) http.Handler {
 	return func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/admin/auth" {
+			authHeader := r.Header.Get("Authorization")
+
+			if authHeader == "" {
+				if required {
+					WriteError(r, w, terrors.Unauthorized(nil, "authorization header required"))
+					return
+				}
 				handler.ServeHTTP(w, r)
 				return
 			}
 
-			auth, err := parseToken(r.Header.Get("Authorization"))
+			auth, err := parseToken(authHeader)
 			if err != nil {
 				WriteError(r, w, terrors.Unauthorized(err, "invalid authorization header"))
 				return

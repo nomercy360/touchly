@@ -21,6 +21,8 @@ CREATE TABLE otps
     created_at TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TYPE contact_visibility AS ENUM ('public', 'private', 'shared_link');
+
 CREATE TABLE contacts
 (
     id                 SERIAL PRIMARY KEY,
@@ -30,17 +32,22 @@ CREATE TABLE contacts
     about              TEXT,
     website            VARCHAR(255),
     country_code       VARCHAR(10),
-    views_amount       INTEGER            DEFAULT 0,
-    saves_amount       INTEGER            DEFAULT 0,
-    created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    views_amount INTEGER                     DEFAULT 0,
+    saves_amount INTEGER                     DEFAULT 0,
+    created_at   TIMESTAMP          NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TIMESTAMP          NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted_at         TIMESTAMP,
     phone_number       VARCHAR(50),
     phone_calling_code VARCHAR(10),
     email              VARCHAR(255),
-    user_id      INTEGER NOT NULL REFERENCES users (id),
-    is_published BOOLEAN NOT NULL DEFAULT FALSE
+    user_id      INTEGER            NOT NULL REFERENCES users (id),
+    visibility   contact_visibility NOT NULL DEFAULT 'public'
 );
+
+CREATE INDEX contacts_user_id_index ON contacts (user_id);
+CREATE INDEX contacts_visibility_index ON contacts (visibility);
+CREATE INDEX contacts_name_index ON contacts (name);
+CREATE INDEX contacts_activity_name_index ON contacts (activity_name);
 
 CREATE TABLE addresses
 (

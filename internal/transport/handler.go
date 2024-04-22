@@ -27,11 +27,13 @@ type api interface {
 	SendOTP(email string) error
 	SetPassword(email, password string) error
 	GetUserByID(userID int64) (*db.User, error)
+	ListMyContacts(userID int64) (db.ContactsPage, error)
 
-	ListContacts(tagIDs []int, search string, lat float64, lng float64, radius int, page, pageSize int) (db.ContactsPage, error)
+	ListContacts(userID int64, tagIDs []int, search string, lat float64, lng float64, radius int, page, pageSize int) (db.ContactsPage, error)
 	CreateContact(userID int64, contact db.Contact) (*db.Contact, error)
-	GetContact(id int64) (*db.Contact, error)
+	GetContact(userID, id int64) (*db.Contact, error)
 	UpdateContact(userID, contactID int64, contact api2.UpdateContactRequest) (*db.Contact, error)
+	UpdateContactVisibility(userID, contactID int64, visibility db.ContactVisibility) error
 	DeleteContact(userID, id int64) error
 
 	CreateContactAddress(userID int64, address db.Address) (*db.Address, error)
@@ -116,16 +118,14 @@ func ApiRoutes(tr *transport) http.Handler {
 	r.Post("/otp-verify", tr.VerifyOTPHandler)
 	r.Post("/set-password", tr.SetPasswordHandler)
 
-	r.Get("/contacts", tr.ListContactsHandler)
-	r.Get("/contacts/{id}", tr.GetContactHandler)
-
 	r.Get("/tags", tr.ListTagsHandler)
 
 	r.Group(func(r chi.Router) {
-		r.Use(WithAuth("secret"))
+		r.Use(WithAuth("secret", true))
 
 		r.Get("/me", tr.GetMeHandler)
 		r.Post("/contacts", tr.CreateContactHandler)
+		r.Get("/me/contacts", tr.ListMyContactsHandler)
 
 		r.Post("/tags", tr.CreateTagHandler)
 		r.Delete("/tags/{id}", tr.DeleteTagHandler)
@@ -136,8 +136,16 @@ func ApiRoutes(tr *transport) http.Handler {
 
 		r.Post("/contacts/{id}/address", tr.CreateContactAddressHandler)
 		r.Put("/contacts/{id}", tr.UpdateContactHandler)
+		r.Put("/contacts/{id}/visibility", tr.UpdateContactVisibilityHandler)
 
 		r.Post("/uploads/get-url", tr.GetUploadURLHandler)
+	})
+
+	r.Group(func(r chi.Router) {
+		r.Use(WithAuth("secret", false))
+
+		r.Get("/contacts", tr.ListContactsHandler)
+		r.Get("/contacts/{id}", tr.GetContactHandler)
 	})
 
 	return r

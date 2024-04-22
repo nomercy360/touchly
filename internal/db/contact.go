@@ -1,9 +1,7 @@
 package db
 
 import (
-	"database/sql"
 	"database/sql/driver"
-	"errors"
 	"fmt"
 	"github.com/lib/pq"
 	"strconv"
@@ -11,39 +9,56 @@ import (
 	"time"
 )
 
+type ContactVisibility string
+
+const (
+	ContactVisibilityPublic     ContactVisibility = "public"
+	ContactVisibilityPrivate    ContactVisibility = "private"
+	ContactVisibilitySharedLink ContactVisibility = "shared_link"
+)
+
+func (v ContactVisibility) IsValid() bool {
+	switch v {
+	case ContactVisibilityPublic, ContactVisibilityPrivate, ContactVisibilitySharedLink:
+		return true
+	}
+
+	return false
+}
+
 type Contact struct {
-	ID               int64      `db:"id" json:"id"`
-	Name             string     `db:"name" json:"name"`
-	Avatar           *string    `db:"avatar" json:"avatar"`
-	ActivityName     *string    `db:"activity_name" json:"activity_name"`
-	Website          *string    `db:"website" json:"website"`
-	CountryCode      *string    `db:"country_code" json:"country_code"`
-	About            *string    `db:"about" json:"about"`
-	ViewsAmount      int        `db:"views_amount" json:"views_amount"`
-	SavesAmount      int        `db:"saves_amount" json:"saves_amount"`
-	CreatedAt        time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt        time.Time  `db:"updated_at" json:"updated_at"`
-	Address          *Address   `db:"-" json:"address,omitempty"`
-	PhoneNumber      string     `db:"phone_number" json:"phone_number"`
-	PhoneCallingCode string     `db:"phone_calling_code" json:"phone_calling_code"`
-	Email            string     `db:"email" json:"email"`
-	Tags             []Tag      `db:"-" json:"tags,omitempty"`
-	SocialLinks      []Link     `db:"-" json:"social_links,omitempty"`
-	DeletedAt        *time.Time `db:"deleted_at" json:"deleted_at"`
-	UserID           int64      `db:"user_id" json:"user_id"`
-	IsPublished      bool       `db:"is_published" json:"is_published"`
+	ID               int64             `db:"id" json:"id"`
+	Name             string            `db:"name" json:"name"`
+	Avatar           *string           `db:"avatar" json:"avatar"`
+	ActivityName     *string           `db:"activity_name" json:"activity_name"`
+	Website          *string           `db:"website" json:"website"`
+	CountryCode      *string           `db:"country_code" json:"country_code"`
+	About            *string           `db:"about" json:"about"`
+	ViewsAmount      int               `db:"views_amount" json:"views_amount"`
+	SavesAmount      int               `db:"saves_amount" json:"saves_amount"`
+	CreatedAt        time.Time         `db:"created_at" json:"created_at"`
+	UpdatedAt        time.Time         `db:"updated_at" json:"updated_at"`
+	Address          *Address          `db:"-" json:"address,omitempty"`
+	PhoneNumber      string            `db:"phone_number" json:"phone_number"`
+	PhoneCallingCode string            `db:"phone_calling_code" json:"phone_calling_code"`
+	Email            string            `db:"email" json:"email"`
+	Tags             []Tag             `db:"-" json:"tags,omitempty"`
+	SocialLinks      []Link            `db:"-" json:"social_links,omitempty"`
+	DeletedAt        *time.Time        `db:"deleted_at" json:"deleted_at"`
+	UserID           int64             `db:"user_id" json:"user_id"`
+	Visibility       ContactVisibility `db:"visibility" json:"visibility"`
 }
 
 type ContactListEntry struct {
-	ID           int64  `db:"id" json:"id"`
-	Name         string `db:"name" json:"name"`
-	Avatar       string `db:"avatar" json:"avatar"`
-	ActivityName string `db:"activity_name" json:"activity_name"`
-	About        string `db:"about" json:"about"`
-	ViewsAmount  int    `db:"views_amount" json:"views_amount"`
-	SavesAmount  int    `db:"saves_amount" json:"saves_amount"`
-	UserID       int64  `db:"user_id" json:"user_id"`
-	IsPublished  bool   `db:"is_published" json:"is_published"`
+	ID           int64             `db:"id" json:"id"`
+	Name         string            `db:"name" json:"name"`
+	Avatar       string            `db:"avatar" json:"avatar"`
+	ActivityName string            `db:"activity_name" json:"activity_name"`
+	About        string            `db:"about" json:"about"`
+	ViewsAmount  int               `db:"views_amount" json:"views_amount"`
+	SavesAmount  int               `db:"saves_amount" json:"saves_amount"`
+	UserID       int64             `db:"user_id" json:"user_id"`
+	Visibility   ContactVisibility `db:"visibility" json:"visibility"`
 }
 
 type ContactsPage struct {
@@ -125,7 +140,8 @@ type Address struct {
 }
 
 func (s *storage) ListContacts(
-	tagIDs []int, search string, lat float64, lng float64, radius int, page, pageSize int) (ContactsPage, error) {
+	userID int64, tagIDs []int, search string, lat float64,
+	lng float64, radius int, page, pageSize int) (ContactsPage, error) {
 
 	contactsPage := ContactsPage{
 		Page:     page,
@@ -142,6 +158,12 @@ func (s *storage) ListContacts(
 		whereClauses = append(whereClauses, "(c.name ILIKE $"+strconv.Itoa(paramIndex)+" OR c.activity_name ILIKE $"+strconv.Itoa(paramIndex)+")")
 		args = append(args, "%"+search+"%")
 		paramIndex++
+	}
+
+	if userID != 0 {
+		whereClauses = append(whereClauses, "(c.user_id = $"+strconv.Itoa(paramIndex)+" OR c.visibility = 'public')")
+	} else {
+		whereClauses = append(whereClauses, "c.visibility = 'public'")
 	}
 
 	if len(tagIDs) > 0 {
@@ -180,7 +202,7 @@ func (s *storage) ListContacts(
 	}
 
 	selectQuery := `
-        SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount, c.saves_amount, c.user_id, c.is_published
+        SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount, c.saves_amount, c.user_id, c.visibility
         FROM contacts c`
 
 	if len(tagIDs) > 0 {
@@ -211,7 +233,7 @@ func (s *storage) ListContacts(
 		var c ContactListEntry
 		err = rows.Scan(
 			&c.ID, &c.Name, &c.Avatar, &c.ActivityName, &c.About, &c.ViewsAmount, &c.SavesAmount, &c.UserID,
-			&c.IsPublished,
+			&c.Visibility,
 		)
 		if err != nil {
 			return contactsPage, fmt.Errorf("scanning contact row: %w", err)
@@ -232,15 +254,18 @@ func (s *storage) CreateContact(contact Contact) (*Contact, error) {
 	defer tx.Rollback()
 
 	// Insert the contact
-	var contactID int64
+	var res Contact
+
 	query := `
 		INSERT INTO contacts
-		    (name, avatar, activity_name, about, website, country_code, deleted_at, phone_number, phone_calling_code, email, user_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		RETURNING id
+		    (name, avatar, activity_name, about, website, country_code, phone_number, phone_calling_code, email, user_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		RETURNING id, name, avatar, activity_name, about, website, country_code, phone_number, phone_calling_code, email, user_id, created_at, updated_at, visibility, deleted_at
 	`
 
-	err = tx.QueryRow(query, contact.Name, contact.Avatar, contact.ActivityName, contact.About, contact.Website, contact.CountryCode, contact.DeletedAt, contact.PhoneNumber, contact.PhoneCallingCode, contact.Email, contact.UserID).Scan(&contactID)
+	err = tx.QueryRow(query, contact.Name, contact.Avatar, contact.ActivityName, contact.About, contact.Website, contact.CountryCode, contact.PhoneNumber, contact.PhoneCallingCode, contact.Email, contact.UserID).Scan(
+		&res.ID, &res.Name, &res.Avatar, &res.ActivityName, &res.About, &res.Website, &res.CountryCode, &res.PhoneNumber, &res.PhoneCallingCode, &res.Email, &res.UserID, &res.CreatedAt, &res.UpdatedAt, &res.Visibility, &res.DeletedAt,
+	)
 
 	if err != nil {
 		return nil, err
@@ -248,7 +273,7 @@ func (s *storage) CreateContact(contact Contact) (*Contact, error) {
 
 	if len(contact.Tags) > 0 {
 		for _, tag := range contact.Tags {
-			if _, err = tx.Exec("INSERT INTO contact_tags (contact_id, tag_id) VALUES ($1, $2)", contactID, tag.ID); err != nil {
+			if _, err = tx.Exec("INSERT INTO contact_tags (contact_id, tag_id) VALUES ($1, $2)", res.ID, tag.ID); err != nil {
 				return nil, err
 			}
 		}
@@ -256,7 +281,7 @@ func (s *storage) CreateContact(contact Contact) (*Contact, error) {
 
 	if len(contact.SocialLinks) > 0 {
 		for _, link := range contact.SocialLinks {
-			row := tx.QueryRow("INSERT INTO social_media_links (contact_id, type, link) VALUES ($1, $2, $3) RETURNING id", contactID, link.Type, link.Link)
+			row := tx.QueryRow("INSERT INTO social_media_links (contact_id, type, link) VALUES ($1, $2, $3) RETURNING id", res.ID, link.Type, link.Link)
 
 			if err = row.Scan(&link.ID); err != nil {
 				return nil, err
@@ -267,8 +292,6 @@ func (s *storage) CreateContact(contact Contact) (*Contact, error) {
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
-
-	contact.ID = contactID
 
 	return &contact, nil
 }
@@ -289,7 +312,7 @@ func (s *storage) DeleteContact(userID, id int64) error {
 	return nil
 }
 
-func (s *storage) UpdateContact(id int64, tags *[]Tag, links *[]Link, updates map[string]interface{}) (*Contact, error) {
+func (s *storage) UpdateContact(userID, contactID int64, tags *[]Tag, links *[]Link, updates map[string]interface{}) (*Contact, error) {
 	tx, err := s.pg.Beginx()
 	if err != nil {
 		return nil, err
@@ -300,7 +323,8 @@ func (s *storage) UpdateContact(id int64, tags *[]Tag, links *[]Link, updates ma
 	baseQuery := "UPDATE contacts SET "
 	var setClauses = []string{"updated_at = now()"}
 	var queryParams = map[string]any{
-		"id": id,
+		"id":      contactID,
+		"user_id": userID,
 	}
 
 	for key, value := range updates {
@@ -309,14 +333,16 @@ func (s *storage) UpdateContact(id int64, tags *[]Tag, links *[]Link, updates ma
 		queryParams[paramName] = value
 	}
 
-	query := baseQuery + strings.Join(setClauses, ", ") + " WHERE id = :id RETURNING *;"
+	query := baseQuery + strings.Join(setClauses, ", ") + " WHERE id = :id AND user_id = :user_id RETURNING *"
 
 	var contact Contact
 
 	rows, err := s.pg.NamedQuery(query, queryParams)
+
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	if rows.Next() {
@@ -327,13 +353,13 @@ func (s *storage) UpdateContact(id int64, tags *[]Tag, links *[]Link, updates ma
 	}
 
 	if tags != nil {
-		_, err = tx.Exec("DELETE FROM contact_tags WHERE contact_id=$1", id)
+		_, err = tx.Exec("DELETE FROM contact_tags WHERE contact_id=$1", contactID)
 		if err != nil {
 			return nil, err
 		}
 
 		for _, tag := range *tags {
-			_, err = tx.Exec("INSERT INTO contact_tags (contact_id, tag_id) VALUES ($1, $2)", id, tag.ID)
+			_, err = tx.Exec("INSERT INTO contact_tags (contact_id, tag_id) VALUES ($1, $2)", contactID, tag.ID)
 			if err != nil {
 				return nil, err
 			}
@@ -341,13 +367,13 @@ func (s *storage) UpdateContact(id int64, tags *[]Tag, links *[]Link, updates ma
 	}
 
 	if links != nil {
-		_, err = tx.Exec("DELETE FROM social_media_links WHERE contact_id=$1", id)
+		_, err = tx.Exec("DELETE FROM social_media_links WHERE contact_id=$1", contactID)
 		if err != nil {
 			return nil, err
 		}
 
 		for _, link := range *links {
-			_, err = tx.Exec("INSERT INTO social_media_links (contact_id, type, link) VALUES ($1, $2, $3)", id, link.Type, link.Link)
+			_, err = tx.Exec("INSERT INTO social_media_links (contact_id, type, link) VALUES ($1, $2, $3)", contactID, link.Type, link.Link)
 			if err != nil {
 				return nil, err
 			}
@@ -355,7 +381,7 @@ func (s *storage) UpdateContact(id int64, tags *[]Tag, links *[]Link, updates ma
 	}
 
 	tagsUpdated := make([]Tag, 0)
-	err = tx.Select(&tagsUpdated, "SELECT t.id, t.name FROM tags t JOIN contact_tags ct ON t.id = ct.tag_id WHERE ct.contact_id=$1", id)
+	err = tx.Select(&tagsUpdated, "SELECT t.id, t.name FROM tags t JOIN contact_tags ct ON t.id = ct.tag_id WHERE ct.contact_id=$1", contactID)
 
 	if err != nil {
 		return nil, err
@@ -364,7 +390,7 @@ func (s *storage) UpdateContact(id int64, tags *[]Tag, links *[]Link, updates ma
 	contact.Tags = tagsUpdated
 
 	linksUpdated := make([]Link, 0)
-	err = tx.Select(&linksUpdated, "SELECT id, type, link FROM social_media_links WHERE contact_id=$1", id)
+	err = tx.Select(&linksUpdated, "SELECT id, type, link FROM social_media_links WHERE contact_id=$1", contactID)
 
 	if err != nil {
 		return nil, err
@@ -379,23 +405,20 @@ func (s *storage) UpdateContact(id int64, tags *[]Tag, links *[]Link, updates ma
 	return &contact, nil
 }
 
-func (s *storage) GetContact(id int64) (*Contact, error) {
+func (s *storage) GetContact(userID, id int64) (*Contact, error) {
 	var contact Contact
 
 	query := `
 		SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount,
 		       c.saves_amount, c.created_at, c.updated_at, c.phone_number, c.email,
-		       c.user_id, c.is_published, c.country_code, c.phone_calling_code, c.website, c.deleted_at
+		       c.user_id, c.visibility, c.country_code, c.phone_calling_code, c.website, c.deleted_at
 		FROM contacts c
-		WHERE c.id=$1
+		WHERE (c.id=$1 AND c.user_id=$2) OR (c.id=$1 AND c.visibility='public')
 	`
 
-	err := s.pg.Get(&contact, query, id)
+	err := s.pg.Get(&contact, query, id, userID)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("contact with id %d not found", id)
-		}
 		return nil, err
 	}
 
@@ -487,4 +510,51 @@ func (s *storage) CreateContactAddress(address Address) (*Address, error) {
 	}
 
 	return &address, nil
+}
+
+func (s *storage) UpdateContactVisibility(userID, contactID int64, visibility ContactVisibility) error {
+	_, err := s.pg.Exec("UPDATE contacts SET visibility=$1 WHERE id=$2 AND user_id=$3", visibility, contactID, userID)
+
+	if err != nil {
+		if IsNoRowsError(err) {
+			return fmt.Errorf("not found")
+		}
+
+		return err
+	}
+
+	return nil
+}
+
+func (s *storage) GetContactsByUserID(userID int64) (ContactsPage, error) {
+	contactsPage := ContactsPage{}
+
+	query := `
+		SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount, c.saves_amount, c.user_id, c.visibility
+		FROM contacts c
+		WHERE c.user_id=$1
+	`
+
+	rows, err := s.pg.Queryx(query, userID)
+
+	if err != nil {
+		return contactsPage, err
+	}
+
+	defer rows.Close()
+
+	contacts := make([]ContactListEntry, 0)
+
+	for rows.Next() {
+		var c ContactListEntry
+		err = rows.StructScan(&c)
+		if err != nil {
+			return contactsPage, err
+		}
+		contacts = append(contacts, c)
+	}
+
+	contactsPage.Contacts = contacts
+
+	return contactsPage, nil
 }

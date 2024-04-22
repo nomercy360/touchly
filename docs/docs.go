@@ -259,6 +259,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/contacts/{id}/addresses": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "create contact address",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contacts"
+                ],
+                "summary": "Create contact address",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "contact id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "address",
+                        "name": "address",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/db.Address"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/db.Address"
+                        }
+                    }
+                }
+            }
+        },
         "/api/contacts/{id}/save": {
             "post": {
                 "security": [
@@ -345,6 +391,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/contacts/{id}/visibility": {
+            "put": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "update contact visibility",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contacts"
+                ],
+                "summary": "Update contact visibility",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "contact id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "visibility",
+                        "name": "account",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transport.UpdateContactVisibilityRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
         "/api/login": {
             "post": {
                 "description": "login user",
@@ -405,6 +494,34 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/db.User"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/me/contacts": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "get my contacts",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contacts"
+                ],
+                "summary": "List my contacts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/db.ContactsPage"
                         }
                     }
                 }
@@ -694,6 +811,9 @@ const docTemplate = `{
                 "avatar": {
                     "type": "string"
                 },
+                "country_code": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -705,9 +825,6 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
-                },
-                "is_published": {
-                    "type": "boolean"
                 },
                 "name": {
                     "type": "string"
@@ -741,6 +858,12 @@ const docTemplate = `{
                 },
                 "views_amount": {
                     "type": "integer"
+                },
+                "visibility": {
+                    "$ref": "#/definitions/db.ContactVisibility"
+                },
+                "website": {
+                    "type": "string"
                 }
             }
         },
@@ -759,9 +882,6 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
-                "is_published": {
-                    "type": "boolean"
-                },
                 "name": {
                     "type": "string"
                 },
@@ -773,8 +893,24 @@ const docTemplate = `{
                 },
                 "views_amount": {
                     "type": "integer"
+                },
+                "visibility": {
+                    "$ref": "#/definitions/db.ContactVisibility"
                 }
             }
+        },
+        "db.ContactVisibility": {
+            "type": "string",
+            "enum": [
+                "public",
+                "private",
+                "shared_link"
+            ],
+            "x-enum-varnames": [
+                "ContactVisibilityPublic",
+                "ContactVisibilityPrivate",
+                "ContactVisibilitySharedLink"
+            ]
         },
         "db.ContactsPage": {
             "type": "object",
@@ -844,11 +980,14 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "deleted_at": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
-                "email_verified": {
-                    "type": "boolean"
+                "email_verified_at": {
+                    "type": "string"
                 },
                 "id": {
                     "type": "integer"
@@ -903,6 +1042,19 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string"
+                }
+            }
+        },
+        "transport.UpdateContactVisibilityRequest": {
+            "type": "object",
+            "properties": {
+                "visibility": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.ContactVisibility"
+                        }
+                    ],
+                    "example": "public"
                 }
             }
         },

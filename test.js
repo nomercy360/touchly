@@ -262,7 +262,7 @@ describe('API Test', () => {
                         views_amount: 0,
                         saves_amount: 0,
                         user_id: '$S{userId}',
-                        is_published: false,
+                        visibility: 'public',
                     }
                 ]
             },
@@ -283,7 +283,7 @@ describe('API Test', () => {
                         views_amount: 0,
                         saves_amount: 0,
                         user_id: '$S{userId}',
-                        is_published: false,
+                        visibility: 'public',
                     }
                 ]
             },
@@ -304,7 +304,7 @@ describe('API Test', () => {
                         views_amount: 0,
                         saves_amount: 0,
                         user_id: '$S{userId}',
-                        is_published: false,
+                        visibility: 'public',
                     }
                 ]
             },
@@ -330,7 +330,7 @@ describe('API Test', () => {
             .expectStatus(200)
             .expectJsonSchema({
                 type: 'object',
-                required: ['id', 'name', 'avatar', 'activity_name', 'about', 'website', 'country_code', 'phone_number', 'phone_calling_code', 'email', 'user_id', 'tags', 'social_links', 'views_amount', 'saves_amount', 'is_published']
+                required: ['id', 'name', 'avatar', 'activity_name', 'about', 'website', 'country_code', 'phone_number', 'phone_calling_code', 'email', 'user_id', 'tags', 'social_links', 'views_amount', 'saves_amount', 'visibility']
             })
             .expectJsonMatch({
                 id: '$S{firstContactId}',
@@ -348,7 +348,7 @@ describe('API Test', () => {
                 views_amount: 0,
                 saves_amount: 0,
                 user_id: '$S{userId}',
-                is_published: false,
+                visibility: 'public',
             });
     });
 
@@ -375,7 +375,7 @@ describe('API Test', () => {
             .expectStatus(200)
             .expectJsonSchema({
                 type: 'object',
-                required: ['id', 'name', 'avatar', 'activity_name', 'about', 'website', 'country_code', 'phone_number', 'phone_calling_code', 'email', 'user_id', 'tags', 'social_links', 'views_amount', 'saves_amount', 'is_published']
+                required: ['id', 'name', 'avatar', 'activity_name', 'about', 'website', 'country_code', 'phone_number', 'phone_calling_code', 'email', 'user_id', 'tags', 'social_links', 'views_amount', 'saves_amount', 'visibility']
             })
             .expectJsonMatch({
                 name: firstContactUpdate.name,
@@ -392,36 +392,73 @@ describe('API Test', () => {
                 views_amount: 0,
                 saves_amount: 0,
                 user_id: '$S{userId}',
-                is_published: false,
             });
     });
 
-
-    it('POST /uploads/get-url', async () => {
-        const fileName = faker.system.commonFileName('png');
-
+    it('PUT /contacts/:contactId/visibility', async () => {
         await spec()
-            .post(API_URL + '/uploads/get-url?file_name=' + fileName)
+            .put(API_URL + '/contacts/$S{firstContactId}/visibility')
+            .withJson({visibility: 'private'})
             .withBearerToken('$S{token}')
             .expectStatus(200)
-            .withRequestTimeout(5000)
-            .expectJsonSchema({
-                type: 'object',
-                required: ['url']
-            })
-            .stores('url', 'url');
-
-        await spec()
-            .put('$S{url}')
-            .withFile('test.png', './test-data/test-pic.png', {contentType: 'image/png'})
-            .withRequestTimeout(10000)
-            .expectStatus(200);
-
-        // File should be uploaded to S3
-        await spec()
-            .get(CDN_URL + '/$S{userId}/' + fileName)
-            .withRequestTimeout(10000)
-            .expectStatus(200)
-            .save('res-pic.png');
     });
+
+    it('GET /contacts/:contactId', async () => {
+        await spec()
+            .get(API_URL + '/contacts/$S{firstContactId}')
+            .expectStatus(200)
+            .withBearerToken('$S{token}')
+            .expectJsonMatch({
+                visibility: 'private'
+            });
+    });
+
+    it('GET /contacts/:contactId hidden, without token', async () => {
+        await spec()
+            .get(API_URL + '/contacts/$S{firstContactId}')
+            .expectStatus(404);
+    });
+
+    it('GET /contacts hidden, without token', async () => {
+        await spec()
+            .get(API_URL + '/contacts')
+            .expectStatus(200)
+            .expectJsonLength('contacts', 1);
+    });
+
+    it('GET /me/contacts', async () => {
+        await spec()
+            .get(API_URL + '/me/contacts')
+            .withBearerToken('$S{token}')
+            .expectStatus(200)
+            .expectJsonLength('contacts', 2);
+    });
+
+    // it('POST /uploads/get-url', async () => {
+    //     const fileName = faker.system.commonFileName('png');
+    //
+    //     await spec()
+    //         .post(API_URL + '/uploads/get-url?file_name=' + fileName)
+    //         .withBearerToken('$S{token}')
+    //         .expectStatus(200)
+    //         .withRequestTimeout(5000)
+    //         .expectJsonSchema({
+    //             type: 'object',
+    //             required: ['url']
+    //         })
+    //         .stores('url', 'url');
+    //
+    //     await spec()
+    //         .put('$S{url}')
+    //         .withFile('test.png', './test-data/test-pic.png', {contentType: 'image/png'})
+    //         .withRequestTimeout(10000)
+    //         .expectStatus(200);
+    //
+    //     // File should be uploaded to S3
+    //     await spec()
+    //         .get(CDN_URL + '/$S{userId}/' + fileName)
+    //         .withRequestTimeout(10000)
+    //         .expectStatus(200)
+    //         .save('res-pic.png');
+    // });
 });

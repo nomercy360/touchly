@@ -35,6 +35,8 @@ definitions:
         $ref: '#/definitions/db.Address'
       avatar:
         type: string
+      country_code:
+        type: string
       created_at:
         type: string
       deleted_at:
@@ -43,8 +45,6 @@ definitions:
         type: string
       id:
         type: integer
-      is_published:
-        type: boolean
       name:
         type: string
       phone_calling_code:
@@ -67,6 +67,10 @@ definitions:
         type: integer
       views_amount:
         type: integer
+      visibility:
+        $ref: '#/definitions/db.ContactVisibility'
+      website:
+        type: string
     type: object
   db.ContactListEntry:
     properties:
@@ -78,8 +82,6 @@ definitions:
         type: string
       id:
         type: integer
-      is_published:
-        type: boolean
       name:
         type: string
       saves_amount:
@@ -88,7 +90,19 @@ definitions:
         type: integer
       views_amount:
         type: integer
+      visibility:
+        $ref: '#/definitions/db.ContactVisibility'
     type: object
+  db.ContactVisibility:
+    enum:
+      - public
+      - private
+      - shared_link
+    type: string
+    x-enum-varnames:
+      - ContactVisibilityPublic
+      - ContactVisibilityPrivate
+      - ContactVisibilitySharedLink
   db.ContactsPage:
     properties:
       contacts:
@@ -133,10 +147,12 @@ definitions:
     properties:
       created_at:
         type: string
+      deleted_at:
+        type: string
       email:
         type: string
-      email_verified:
-        type: boolean
+      email_verified_at:
+        type: string
       id:
         type: integer
       updated_at:
@@ -172,6 +188,13 @@ definitions:
         type: string
       password:
         type: string
+    type: object
+  transport.UpdateContactVisibilityRequest:
+    properties:
+      visibility:
+        allOf:
+          - $ref: '#/definitions/db.ContactVisibility'
+        example: public
     type: object
   transport.VerifyOTPRequest:
     properties:
@@ -317,6 +340,35 @@ paths:
       summary: Update contact
       tags:
         - contacts
+  /api/contacts/{id}/addresses:
+    post:
+      consumes:
+        - application/json
+      description: create contact address
+      parameters:
+        - description: contact id
+          in: path
+          name: id
+          required: true
+          type: integer
+        - description: address
+          in: body
+          name: address
+          required: true
+          schema:
+            $ref: '#/definitions/db.Address'
+      produces:
+        - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/db.Address'
+      security:
+        - JWT: [ ]
+      summary: Create contact address
+      tags:
+        - contacts
   /api/contacts/{id}/save:
     post:
       consumes:
@@ -369,6 +421,33 @@ paths:
       security:
         - JWT: [ ]
       summary: Delete saved contact
+      tags:
+        - contacts
+  /api/contacts/{id}/visibility:
+    put:
+      consumes:
+        - application/json
+      description: update contact visibility
+      parameters:
+        - description: contact id
+          in: path
+          name: id
+          required: true
+          type: integer
+        - description: visibility
+          in: body
+          name: account
+          required: true
+          schema:
+            $ref: '#/definitions/transport.UpdateContactVisibilityRequest'
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+        - JWT: [ ]
+      summary: Update contact visibility
       tags:
         - contacts
   /api/contacts/saved:
@@ -437,6 +516,23 @@ paths:
       summary: Get user
       tags:
         - users
+  /api/me/contacts:
+    get:
+      consumes:
+        - application/json
+      description: get my contacts
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/db.ContactsPage'
+      security:
+        - JWT: [ ]
+      summary: List my contacts
+      tags:
+        - contacts
   /api/otp:
     post:
       consumes:

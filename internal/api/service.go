@@ -23,13 +23,16 @@ type storage interface {
 
 	CreateContact(contact db.Contact) (*db.Contact, error)
 	DeleteContact(userID, id int64) error
-	UpdateContact(id int64, tags *[]db.Tag, links *[]db.Link, updates map[string]interface{}) (*db.Contact, error)
-	ListContacts(tagIDs []int, search string, lat float64, lng float64, radius int, page, pageSize int) (db.ContactsPage, error)
-	GetContact(id int64) (*db.Contact, error)
+	UpdateContact(userID, contactID int64, tags *[]db.Tag, links *[]db.Link, updates map[string]interface{}) (*db.Contact, error)
+	ListContacts(userID int64, tagIDs []int, search string, lat float64, lng float64, radius int, page, pageSize int) (db.ContactsPage, error)
+	GetContact(userID, id int64) (*db.Contact, error)
 	SaveContact(userID, contactID int64) error
 	DeleteSavedContact(userID, contactID int64) error
 	ListSavedContacts(userID int64) ([]db.Contact, error)
 	CreateContactAddress(address db.Address) (*db.Address, error)
+	GetContactsByUserID(userID int64) (db.ContactsPage, error)
+
+	UpdateContactVisibility(userID, contactID int64, visibility db.ContactVisibility) error
 
 	ListTags() ([]db.Tag, error)
 	CreateTag(tag db.Tag) (*db.Tag, error)
