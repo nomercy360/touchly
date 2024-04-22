@@ -1,8 +1,8 @@
 const {spec} = require('pactum');
 const {faker} = require('@faker-js/faker');
 
-const API_URL = 'http://localhost:8080/api';
-const ADMIN_URL = 'http://localhost:8080/admin';
+const API_URL = 'http://172.27.16.1:8080/api';
+const ADMIN_URL = 'http://172.27.16.1:8080/admin';
 
 const TEST_USER = {
     email: faker.internet.email(),
