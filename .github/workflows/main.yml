@@ -45,7 +45,7 @@ jobs:
           tags: "${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
       -
         name: Start Container with api
-        uses: docker://${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}:${{ env.IMAGE_TAG }}
+        uses: docker://${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
         with:
           args: /app/api -config /api/configs/config.api.example.yaml
       -
