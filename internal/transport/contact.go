@@ -286,6 +286,17 @@ func (tr *transport) DeleteSavedContactHandler(w http.ResponseWriter, r *http.Re
 	WriteOK(w)
 }
 
+// CreateContactAddressHandler godoc
+// @Summary      Create contact address
+// @Description  create contact address
+// @Tags         contacts
+// @Accept       json
+// @Produce      json
+// @Param        id		path     int     true  "contact id"
+// @Param        address   body     db.Address     true  "address"
+// @Success      201  {object}   db.Address
+// @Security     JWT
+// @Router       /api/contacts/{id}/addresses [post]
 func (tr *transport) CreateContactAddressHandler(w http.ResponseWriter, r *http.Request) {
 	var address db.Address
 	if err := decodeRequest(r, &address); err != nil {

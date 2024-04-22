@@ -441,7 +441,7 @@ func (s *storage) CreateContactAddress(address Address) (*Address, error) {
 		RETURNING id
 	`
 
-	err := s.pg.QueryRow(query, address.ExternalID, address.ContactID, address.Label, address.Name, address.Location.Lat, address.Location.Lng).Scan(&address.ID)
+	err := s.pg.QueryRow(query, address.ExternalID, address.ContactID, address.Label, address.Name, address.Location.Lng, address.Location.Lat).Scan(&address.ID)
 
 	if err != nil {
 		return nil, err
