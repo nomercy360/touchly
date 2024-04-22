@@ -1,8 +1,8 @@
 const {spec} = require('pactum');
 const {faker} = require('@faker-js/faker');
 
-const API_URL = 'http://172.27.16.1:8080/api';
-const ADMIN_URL = 'http://172.27.16.1:8080/admin';
+const API_URL = 'http://127.0.0.1:8080/api';
+const ADMIN_URL = 'http://127.0.0.1:8080/admin';
 
 const TEST_USER = {
     email: faker.internet.email(),
@@ -21,7 +21,16 @@ describe('API Test', () => {
                 'Content-Type': 'application/json',
                 'X-Api-Key': 'secret'
             })
-            .expectStatus(201);
+            .expectStatus(201)
+            .expectJsonSchema({
+                type: 'object',
+                required: ['id', 'email', 'created_at', 'updated_at', 'email_verified_at', 'deleted_at']
+            })
+            .expectJsonMatch({
+                email: TEST_USER.email,
+                deleted_at: null,
+            })
+            .stores('userId', 'id');
 
         await spec()
             .post(API_URL + '/login')
@@ -150,7 +159,7 @@ describe('API Test', () => {
         contact_id: '$S{contactId}'
     }
 
-    it('POST /addresses', async () => {
+    it('POST /contacts/:contactId/address', async () => {
         await spec()
             .post(API_URL + '/contacts/' + '$S{contactId}' + '/address')
             .withJson(address)
@@ -168,5 +177,31 @@ describe('API Test', () => {
                 contact_id: '$S{contactId}'
             })
             .stores('addressId', 'id');
+    });
+
+    const search = '?lat=37.7749&lng=-122.4194&radius=10000';
+
+    it('GET /contacts', async () => {
+        await spec()
+            .get(API_URL + '/contacts' + search)
+            .expectStatus(200)
+            .expectJsonMatch({
+                page: 1,
+                page_size: 20,
+                total_count: 1,
+                contacts: [
+                    {
+                        id: '$S{contactId}',
+                        name: contact.name,
+                        avatar: contact.avatar,
+                        activity_name: contact.activity_name,
+                        about: contact.about,
+                        views_amount: 0,
+                        saves_amount: 0,
+                        user_id: '$S{userId}',
+                        is_published: false,
+                    }
+                ]
+            });
     });
 });

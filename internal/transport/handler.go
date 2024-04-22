@@ -18,7 +18,7 @@ type transport struct {
 }
 
 type admin interface {
-	CreateUser(email, password string) error
+	CreateUser(email, password string) (*db.User, error)
 }
 
 type api interface {

@@ -16,10 +16,10 @@ func hashPassword(password string) (string, error) {
 	return string(bytes), nil
 }
 
-func (adm *admin) CreateUser(email, password string) error {
+func (adm *admin) CreateUser(email, password string) (*db.User, error) {
 	hash, err := hashPassword(password)
 	if err != nil {
-		return terrors.InternalServerError(err, "invalid data")
+		return nil, terrors.InternalServerError(err, "invalid data")
 	}
 
 	now := time.Now()
@@ -30,11 +30,11 @@ func (adm *admin) CreateUser(email, password string) error {
 		EmailVerifiedAt: &now,
 	}
 
-	_, err = adm.storage.CreateUser(user)
+	res, err := adm.storage.CreateUser(user)
 
 	if err != nil {
-		return terrors.InternalServerError(err, "could not create user")
+		return nil, terrors.InternalServerError(err, "could not create user")
 	}
 
-	return nil
+	return res, nil
 }

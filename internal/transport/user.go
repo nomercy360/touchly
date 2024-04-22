@@ -167,12 +167,12 @@ func (tr *transport) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := tr.admin.CreateUser(req.Email, req.Password)
+	res, err := tr.admin.CreateUser(req.Email, req.Password)
 
 	if err != nil {
 		WriteError(r, w, err)
 		return
 	}
 
-	WriteJSON(w, http.StatusCreated, map[string]string{"status": "ok"})
+	WriteJSON(w, http.StatusCreated, res)
 }
