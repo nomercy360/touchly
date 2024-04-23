@@ -9,7 +9,8 @@ func (s *storage) ListTags() ([]Tag, error) {
 
 	defer rows.Close()
 
-	var tags []Tag
+	tags := make([]Tag, 0)
+
 	for rows.Next() {
 		var tag Tag
 		if err := rows.Scan(&tag.ID, &tag.Name); err != nil {

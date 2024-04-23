@@ -1,4 +1,33 @@
 definitions:
+  api.UpdateContactRequest:
+    properties:
+      about:
+        type: string
+      activity_name:
+        type: string
+      avatar:
+        type: string
+      country_code:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      phone_calling_code:
+        type: string
+      phone_number:
+        type: string
+      social_links:
+        items:
+          $ref: '#/definitions/db.Link'
+        type: array
+      tags:
+        items:
+          $ref: '#/definitions/db.Tag'
+        type: array
+      website:
+        type: string
+    type: object
   api.UploadURL:
     properties:
       url:
@@ -330,6 +359,12 @@ paths:
           name: id
           required: true
           type: integer
+        - description: contact
+          in: body
+          name: contact
+          required: true
+          schema:
+            $ref: '#/definitions/api.UpdateContactRequest'
       produces:
         - application/json
       responses:
@@ -340,7 +375,7 @@ paths:
       summary: Update contact
       tags:
         - contacts
-  /api/contacts/{id}/addresses:
+  /api/contacts/{id}/address:
     post:
       consumes:
         - application/json

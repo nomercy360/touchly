@@ -38,12 +38,12 @@ type Contact struct {
 	SavesAmount      int               `db:"saves_amount" json:"saves_amount"`
 	CreatedAt        time.Time         `db:"created_at" json:"created_at"`
 	UpdatedAt        time.Time         `db:"updated_at" json:"updated_at"`
-	Address          *Address          `db:"-" json:"address,omitempty"`
+	Address          *Address          `db:"-" json:"address"`
 	PhoneNumber      string            `db:"phone_number" json:"phone_number"`
 	PhoneCallingCode string            `db:"phone_calling_code" json:"phone_calling_code"`
 	Email            string            `db:"email" json:"email"`
-	Tags             []Tag             `db:"-" json:"tags,omitempty"`
-	SocialLinks      []Link            `db:"-" json:"social_links,omitempty"`
+	Tags             []Tag             `db:"-" json:"tags"`
+	SocialLinks      []Link            `db:"-" json:"social_links"`
 	DeletedAt        *time.Time        `db:"deleted_at" json:"deleted_at"`
 	UserID           int64             `db:"user_id" json:"user_id"`
 	Visibility       ContactVisibility `db:"visibility" json:"visibility"`

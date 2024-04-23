@@ -210,6 +210,15 @@
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                  {
+                    "description": "contact",
+                    "name": "contact",
+                    "in": "body",
+                    "required": true,
+                    "schema": {
+                      "$ref": "#/definitions/api.UpdateContactRequest"
+                    }
                     }
                 ],
                 "responses": {
@@ -251,7 +260,7 @@
                 }
             }
         },
-      "/api/contacts/{id}/addresses": {
+      "/api/contacts/{id}/address": {
         "post": {
           "security": [
             {
@@ -748,6 +757,50 @@
         }
     },
     "definitions": {
+      "api.UpdateContactRequest": {
+        "type": "object",
+        "properties": {
+          "about": {
+            "type": "string"
+          },
+          "activity_name": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": "string"
+          },
+          "country_code": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone_calling_code": {
+            "type": "string"
+          },
+          "phone_number": {
+            "type": "string"
+          },
+          "social_links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/db.Link"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/db.Tag"
+            }
+          },
+          "website": {
+            "type": "string"
+          }
+        }
+      },
       "api.UploadURL": {
         "type": "object",
         "properties": {

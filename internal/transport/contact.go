@@ -89,6 +89,7 @@ func (tr *transport) GetContactHandler(w http.ResponseWriter, r *http.Request) {
 // @Accept       json
 // @Produce      json
 // @Param        id   path     int     true  "contact id"
+// @Param        contact   body     api.UpdateContactRequest     true  "contact"
 // @Success      200  {object}   nil
 // @Security     JWT
 // @Router       /api/contacts/{id} [put]
@@ -303,7 +304,7 @@ func (tr *transport) DeleteSavedContactHandler(w http.ResponseWriter, r *http.Re
 // @Param        address   body     db.Address     true  "address"
 // @Success      201  {object}   db.Address
 // @Security     JWT
-// @Router       /api/contacts/{id}/addresses [post]
+// @Router       /api/contacts/{id}/address [post]
 func (tr *transport) CreateContactAddressHandler(w http.ResponseWriter, r *http.Request) {
 	var address db.Address
 	if err := decodeRequest(r, &address); err != nil {
