@@ -276,6 +276,8 @@ func (s *storage) CreateContact(contact Contact) (*Contact, error) {
 			if _, err = tx.Exec("INSERT INTO contact_tags (contact_id, tag_id) VALUES ($1, $2)", res.ID, tag.ID); err != nil {
 				return nil, err
 			}
+
+			res.Tags = append(res.Tags, tag)
 		}
 	}
 
@@ -286,6 +288,8 @@ func (s *storage) CreateContact(contact Contact) (*Contact, error) {
 			if err = row.Scan(&link.ID); err != nil {
 				return nil, err
 			}
+
+			res.SocialLinks = append(res.SocialLinks, link)
 		}
 	}
 
@@ -293,7 +297,7 @@ func (s *storage) CreateContact(contact Contact) (*Contact, error) {
 		return nil, err
 	}
 
-	return &contact, nil
+	return &res, nil
 }
 
 func (s *storage) DeleteContact(userID, id int64) error {
