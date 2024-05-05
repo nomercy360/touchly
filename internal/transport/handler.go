@@ -1,14 +1,13 @@
 package transport
 
 import (
-	"encoding/json"
-	"errors"
 	"github.com/go-chi/chi/v5"
-	"log"
+	"github.com/golang-jwt/jwt/v5"
+	echojwt "github.com/labstack/echo-jwt/v4"
+	"github.com/labstack/echo/v4"
 	"net/http"
 	api2 "touchly/internal/api"
 	"touchly/internal/db"
-	"touchly/internal/terrors"
 )
 
 type transport struct {
@@ -53,61 +52,53 @@ func New(api api, admin admin, jwtSecret string) *transport {
 	return &transport{api: api, admin: admin, jwtSecret: jwtSecret}
 }
 
-// WriteError responds to a HTTP request with an error.
-func WriteError(r *http.Request, w http.ResponseWriter, err error) {
-	var terror *terrors.Error
-
-	if errors.As(err, &terror) {
-		logError(r.URL.Path, terror)
-		WriteJSON(w, terror.Code, map[string]string{"error": terror.Msg})
-
-		return
-	}
-
-	log.Printf("err: %v", err)
-	WriteJSON(w, http.StatusInternalServerError, terrors.InternalServerError)
-}
-
-func logError(path string, err *terrors.Error) {
-	if err.Err != nil {
-		log.Printf("path: %s, code: %d, msg: %s, err: %v", path, err.Code, err.Msg, err.Err)
-	} else {
-		log.Printf("path: %s, code: %d, msg: %s", path, err.Code, err.Msg)
-	}
-}
-
-// WriteJSON writes a JSON response to a HTTP request.
-func WriteJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, _ := json.Marshal(payload)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-
-	if _, err := w.Write(response); err != nil {
-		log.Printf("failed to write response: %v", err)
-	}
-
-	return
-}
-
-func WriteOK(w http.ResponseWriter) {
-	WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-}
-
 type HealthStatus struct {
 	Status string `json:"status"`
 }
 
-func (tr *transport) HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	WriteJSON(w, http.StatusOK, HealthStatus{Status: "ok"})
+func (tr *transport) HealthCheckHandler(c echo.Context) error {
+	return c.JSON(http.StatusOK, HealthStatus{Status: "ok"})
 }
 
-func (tr *transport) RegisterRoutes(r chi.Router) {
-	r.Get("/health", tr.HealthCheckHandler)
+func (tr *transport) RegisterRoutes(e *echo.Echo) {
+	e.GET("/health", tr.HealthCheckHandler)
 
-	r.Mount("/api", ApiRoutes(tr))
+	a := e.Group("/api")
 
-	r.Mount("/admin", AdminRoutes(tr))
+	config := echojwt.Config{
+		NewClaimsFunc: func(c echo.Context) jwt.Claims {
+			return new(svc.JWTClaims)
+		},
+		SigningKey: []byte("secret"),
+	}
+
+	a.Use(echojwt.WithConfig(config))
+
+	a.POST("/login", tr.LoginUserHandler)
+	a.POST("/otp", tr.SendOTPHandler)
+	a.POST("/otp-verify", tr.VerifyOTPHandler)
+	a.POST("/set-password", tr.SetPasswordHandler)
+	a.GET("/tags", tr.ListTagsHandler)
+	a.POST("/contacts", tr.CreateContactHandler)
+	a.GET("/contacts", tr.ListContactsHandler)
+	a.GET("/contacts/{id}", tr.GetContactHandler)
+	a.PUT("/contacts/{id}", tr.UpdateContactHandler)
+	a.PUT("/contacts/{id}/visibility", tr.UpdateContactVisibilityHandler)
+	a.POST("/contacts/{id}/address", tr.CreateContactAddressHandler)
+	a.GET("/me", tr.GetMeHandler)
+	a.POST("/contacts/{id}/save", tr.SaveContactHandler)
+	a.DELETE("/contacts/{id}/save", tr.DeleteSavedContactHandler)
+	a.GET("/contacts/saved", tr.ListSavedContactsHandler)
+	a.POST("/tags", tr.CreateTagHandler)
+	a.DELETE("/tags/{id}", tr.DeleteTagHandler)
+	a.POST("/uploads/get-url", tr.GetUploadURLHandler)
+
+	adm := e.Group("/admin")
+	adm.Use(WithAdminAuth("secret"))
+
+	adm.POST("/users", tr.CreateUserHandler)
+
+	// e.Mount("/admin", AdminRoutes(tr))
 }
 
 func ApiRoutes(tr *transport) http.Handler {

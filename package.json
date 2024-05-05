@@ -9,9 +9,9 @@
     "pactum": "latest"
   },
   "scripts": {
-    "drop": "docker exec -it postgres psql -U postgres -d postgres -c 'DROP DATABASE IF EXISTS touchly WITH (FORCE);'",
-    "create": "docker exec -it postgres psql -U postgres -d postgres -c 'CREATE DATABASE touchly;'",
-    "migrate": "migrate -source file://${PWD}/scripts/migrations -database postgres://postgres:mysecretpassword@localhost:5432/touchly\\?sslmode=disable up",
+    "drop": "docker exec -it postgres psql -U postgres -d postgres -c \"DROP DATABASE IF EXISTS touchly WITH (FORCE);\"",
+    "create": "docker exec -it postgres psql -U postgres -d postgres -c \"CREATE DATABASE touchly;\"",
+    "migrate": "migrate -source file://scripts/migrations -database postgres://postgres:mysecretpassword@localhost:5432/touchly?sslmode=disable up",
     "test": "npm run drop && npm run create && npm run migrate && mocha --timeout 10000 test.js"
   }
 }

@@ -2,6 +2,7 @@ package transport
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/labstack/echo/v4"
 	"net/http"
 	"strconv"
 	"strings"
@@ -41,7 +42,7 @@ func getUserIDFromRequest(r *http.Request) int64 {
 // @Success      201  {object}   db.Contact
 // @Security     JWT
 // @Router       /api/contacts [post]
-func (tr *transport) CreateContactHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) CreateContactHandler(c echo.Context) error {
 	var contact db.Contact
 	if err := decodeRequest(r, &contact); err != nil {
 		WriteError(r, w, err)
@@ -68,7 +69,7 @@ func (tr *transport) CreateContactHandler(w http.ResponseWriter, r *http.Request
 // @Param        id   path     int     true  "contact id"
 // @Success      200  {object}   db.Contact
 // @Router       /api/contacts/{id} [get]
-func (tr *transport) GetContactHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) GetContactHandler(c echo.Context) error {
 	id, _ := getIDFromRequest(r)
 	userID := getUserIDFromRequest(r)
 
@@ -93,7 +94,7 @@ func (tr *transport) GetContactHandler(w http.ResponseWriter, r *http.Request) {
 // @Success      200  {object}   nil
 // @Security     JWT
 // @Router       /api/contacts/{id} [put]
-func (tr *transport) UpdateContactHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) UpdateContactHandler(c echo.Context) error {
 	var contact api2.UpdateContactRequest
 	if err := decodeRequest(r, &contact); err != nil {
 		WriteError(r, w, err)
@@ -123,7 +124,7 @@ func (tr *transport) UpdateContactHandler(w http.ResponseWriter, r *http.Request
 // @Success      200  {object}   nil
 // @Security     JWT
 // @Router       /api/contacts/{id} [delete]
-func (tr *transport) DeleteContactHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) DeleteContactHandler(c echo.Context) error {
 	id, err := getIDFromRequest(r)
 	if err != nil {
 		WriteError(r, w, err)
@@ -177,7 +178,7 @@ func queryToIntArray(query string) ([]int, error) {
 // @Param		 lng       query    float64 false  "longitude"
 // @Param        radius    query    int     false  "radius in km"
 // @Router       /api/contacts [get]
-func (tr *transport) ListContactsHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) ListContactsHandler(c echo.Context) error {
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 
@@ -213,7 +214,7 @@ func (tr *transport) ListContactsHandler(w http.ResponseWriter, r *http.Request)
 // @Success      200  {array}   db.Contact
 // @Security     JWT
 // @Router       /api/contacts/saved [get]
-func (tr *transport) ListSavedContactsHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) ListSavedContactsHandler(c echo.Context) error {
 	userID := getUserIDFromRequest(r)
 
 	contacts, err := tr.api.ListSavedContacts(userID)
@@ -241,7 +242,7 @@ type SaveContactRequest struct {
 // @Success      200  {object}   nil
 // @Security     JWT
 // @Router       /api/contacts/{id}/save [post]
-func (tr *transport) SaveContactHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) SaveContactHandler(c echo.Context) error {
 	var data SaveContactRequest
 
 	userID := getUserIDFromRequest(r)
@@ -275,7 +276,7 @@ type DeleteSavedContactRequest struct {
 // @Success      200  {object}   nil
 // @Security     JWT
 // @Router       /api/contacts/{id}/saved [delete]
-func (tr *transport) DeleteSavedContactHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) DeleteSavedContactHandler(c echo.Context) error {
 	var data DeleteSavedContactRequest
 
 	userID := getUserIDFromRequest(r)
@@ -305,7 +306,7 @@ func (tr *transport) DeleteSavedContactHandler(w http.ResponseWriter, r *http.Re
 // @Success      201  {object}   db.Address
 // @Security     JWT
 // @Router       /api/contacts/{id}/address [post]
-func (tr *transport) CreateContactAddressHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) CreateContactAddressHandler(c echo.Context) error {
 	var address db.Address
 	if err := decodeRequest(r, &address); err != nil {
 		WriteError(r, w, err)
@@ -341,7 +342,7 @@ type UpdateContactVisibilityRequest struct {
 // @Success      200  {object}   nil
 // @Security     JWT
 // @Router       /api/contacts/{id}/visibility [put]
-func (tr *transport) UpdateContactVisibilityHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) UpdateContactVisibilityHandler(c echo.Context) error {
 	var data UpdateContactVisibilityRequest
 	if err := decodeRequest(r, &data); err != nil {
 		WriteError(r, w, err)
@@ -370,15 +371,14 @@ func (tr *transport) UpdateContactVisibilityHandler(w http.ResponseWriter, r *ht
 // @Success      200  {object} db.ContactsPage
 // @Security     JWT
 // @Router       /api/me/contacts [get]
-func (tr *transport) ListMyContactsHandler(w http.ResponseWriter, r *http.Request) {
-	userID := getUserIDFromRequest(r)
+func (tr *transport) ListMyContactsHandler(c echo.Context) error {
+	userID := getUserIDFromRequest(c)
 
 	contacts, err := tr.api.ListMyContacts(userID)
 
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteJSON(w, http.StatusOK, contacts)
+	return c.JSON(http.StatusOK, contacts)
 }

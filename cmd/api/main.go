@@ -1,78 +1,60 @@
 package main
 
 import (
-	"flag"
-	"github.com/go-chi/chi/v5"
-	httpSwagger "github.com/swaggo/http-swagger/v2"
-	"gopkg.in/yaml.v3"
+	"context"
+	"errors"
+	"github.com/caarlos0/env/v11"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"time"
 	_ "touchly/docs"
 	"touchly/internal/admin"
 	"touchly/internal/api"
 	"touchly/internal/db"
 	"touchly/internal/services"
 	"touchly/internal/storage"
+	"touchly/internal/terrors"
 	"touchly/internal/transport"
 )
 
-// Config represents the configuration structure
-type Config struct {
-	DbConnString string       `yaml:"db_conn_string"`
-	Server       ServerConfig `yaml:"server"`
-	JWTSecret    string       `yaml:"jwt_secret"`
-	ResendApiKey string       `yaml:"resend_api_key"`
-	AWS          AWSConfig    `yaml:"aws"`
+type config struct {
+	DatabaseURL  string `env:"DATABASE_URL,required"`
+	Server       ServerConfig
+	AWS          AWSConfig
+	JWTSecret    string `env:"JWT_SECRET,required"`
+	ResendApiKey string `env:"RESEND_API_KEY,required"`
+}
+
+type ServerConfig struct {
+	Port string `env:"SERVER_PORT" envDefault:"8080"`
+	Host string `env:"SERVER_HOST" envDefault:"localhost"`
 }
 
 type AWSConfig struct {
-	AccessKeyID     string `yaml:"access_key_id"`
-	SecretAccessKey string `yaml:"secret_access_key"`
-	Bucket          string `yaml:"bucket"`
-	AccountId       string `yaml:"account_id"`
+	AccessKey string `env:"AWS_ACCESS_KEY_ID,required"`
+	SecretKey string `env:"AWS_SECRET_ACCESS_KEY,required"`
+	Bucket    string `env:"AWS_BUCKET,required"`
+	Endpoint  string `env:"AWS_ENDPOINT,required"`
 }
 
-// ServerConfig represents the server configuration structure
-type ServerConfig struct {
-	Port string `yaml:"port"`
-	Host string `yaml:"host"`
-}
-
-// ReadConfig reads and unmarshal the YAML configuration from the given file
-func ReadConfig(filename string) (*Config, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	var config Config
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, err
-	}
-
-	return &config, nil
-}
-
-// @title Touchly API
+// @title Peatch API
 // @version 1.0
-// @description API Documentation for the Touchly Backend
+// @description This is a sample server ClanPlatform server.
 
-// @securityDefinitions.apikey JWT
-// @in header
-// @name Authorization
-// @tokenUrl http://localhost:8080/auth
-// @description This API uses JWT Bearer token. You can get one at /auth
+// @host localhost:8080
+// @BasePath /
 func main() {
-	configPath := flag.String("config", "config.yaml", "Path to the config file")
-	flag.Parse()
-
-	config, err := ReadConfig(*configPath)
-	if err != nil {
-		log.Fatalf("Error reading config: %v", err)
+	cfg := config{}
+	if err := env.Parse(&cfg); err != nil {
+		log.Fatalf("Failed to parse config: %v\n", err)
 	}
 
-	pg, err := db.NewDB(config.DbConnString)
+	pg, err := db.New(cfg.DatabaseURL)
 
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v\n", err)
@@ -80,31 +62,106 @@ func main() {
 
 	defer pg.Close()
 
-	// Create a new Echo instance
-	r := chi.NewRouter()
+	e := echo.New()
 
-	// Create a new API instance
+	e.Use(middleware.Recover())
 
-	email := services.NewEmailClient(config.ResendApiKey)
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+	}))
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogStatus:   true,
+		LogURI:      true,
+		LogError:    true,
+		HandleError: true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			if v.Error == nil {
+				logger.LogAttrs(context.Background(), slog.LevelInfo, "REQUEST",
+					slog.String("uri", v.URI),
+					slog.Int("status", v.Status),
+				)
+			} else {
+				logger.LogAttrs(context.Background(), slog.LevelError, "REQUEST_ERROR",
+					slog.String("uri", v.URI),
+					slog.Int("status", v.Status),
+					slog.String("err", v.Error.Error()),
+				)
+			}
+			return nil
+		},
+	}))
+
+	e.HTTPErrorHandler = func(err error, c echo.Context) {
+		var (
+			code = http.StatusInternalServerError
+			msg  interface{}
+		)
+
+		var he *echo.HTTPError
+		var terror *terrors.Error
+		if errors.As(err, &he) {
+			code = he.Code
+			msg = he.Message
+		} else if errors.As(err, &terror) {
+			code = terror.Code
+			msg = terror.Message
+		} else {
+			msg = err.Error()
+		}
+
+		if _, ok := msg.(string); ok {
+			msg = map[string]interface{}{"error": msg}
+		}
+
+		if !c.Response().Committed {
+			if c.Request().Method == http.MethodHead {
+				err = c.NoContent(code)
+			} else {
+				err = c.JSON(code, msg)
+			}
+
+			if err != nil {
+				e.Logger.Error(err)
+			}
+		}
+	}
 
 	s3Client, err := storage.NewS3Client(
-		config.AWS.AccessKeyID, config.AWS.SecretAccessKey, config.AWS.AccountId, config.AWS.Bucket)
+		cfg.AWS.AccessKey, cfg.AWS.SecretKey, cfg.AWS.Endpoint, cfg.AWS.Bucket)
+
+	if err != nil {
+		log.Fatalf("Failed to initialize AWS S3 client: %v\n", err)
+	}
+
+	email := services.NewEmailClient(cfg.ResendApiKey)
 
 	apiSvc := api.NewApi(pg, email, s3Client)
 	adminSvc := admin.NewAdmin(pg)
 
-	app := transport.New(apiSvc, adminSvc, config.JWTSecret)
+	tr := transport.New(apiSvc, adminSvc, cfg.JWTSecret)
 
-	r.Get("/swagger/*", httpSwagger.Handler(
-		httpSwagger.URL("/swagger/doc.json"), //The url pointing to API definition"
-	))
+	tr.RegisterRoutes(e)
 
-	app.RegisterRoutes(r)
+	//e.GET("/swagger/*", echoSwagger.WrapHandler)
 
-	// Start the server
-	log.Printf("Starting server on %s:%s\n", config.Server.Host, config.Server.Port)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	// Start server
+	go func() {
+		if err := e.Start(cfg.Server.Host + ":" + cfg.Server.Port); err != nil {
+			e.Logger.Fatalf("shutting down the server, here is why: %v", err)
+		}
+	}()
 
-	if err := http.ListenAndServe(config.Server.Host+":"+config.Server.Port, r); err != nil {
-		log.Fatalf("Failed to start server: %v\n", err)
+	<-ctx.Done()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := e.Shutdown(ctx); err != nil {
+		e.Logger.Fatal(err)
 	}
 }
