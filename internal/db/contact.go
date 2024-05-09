@@ -451,7 +451,7 @@ func (s *storage) GetContact(userID, id int64) (*Contact, error) {
 
 	err := s.pg.Get(&contact, query, id, userID)
 
-	if err != nil && !IsNoRowsError(err) {
+	if err != nil && IsNoRowsError(err) {
 		return nil, ErrNotFound
 	} else if err != nil {
 		return nil, err
@@ -558,11 +558,9 @@ func (s *storage) CreateContactAddress(contactID int64, address Address) (*Addre
 func (s *storage) UpdateContactVisibility(userID, contactID int64, visibility ContactVisibility) error {
 	_, err := s.pg.Exec("UPDATE contacts SET visibility=$1 WHERE id=$2 AND user_id=$3", visibility, contactID, userID)
 
-	if err != nil {
-		if IsNoRowsError(err) {
-			return fmt.Errorf("not found")
-		}
-
+	if err != nil && IsNoRowsError(err) {
+		return fmt.Errorf("not found")
+	} else if err != nil {
 		return err
 	}
 

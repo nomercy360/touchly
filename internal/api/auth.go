@@ -77,12 +77,10 @@ func (api *api) VerifyOTP(email, otpCode string) error {
 
 	user, err := api.storage.GetUserByEmail(email)
 
-	if err != nil {
-		if db.IsNoRowsError(err) {
-			return terrors.InvalidRequest(nil, "user not found")
-		} else {
-			return terrors.InternalServerError(err, "failed to get user")
-		}
+	if err != nil && db.IsNoRowsError(err) {
+		return terrors.InvalidRequest(nil, "user not found")
+	} else if err != nil {
+		return terrors.InternalServerError(err, "failed to get user")
 	}
 
 	otp, err := api.storage.GetOTPByCode(otpCode, user.ID)
