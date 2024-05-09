@@ -1,8 +1,11 @@
 {
+  "schemes": [
+    "http"
+  ],
     "swagger": "2.0",
     "info": {
       "description": "This is a sample server ClanPlatform server.",
-      "title": "Peatch API",
+      "title": "Touchly API",
         "contact": {},
         "version": "1.0"
     },
@@ -103,7 +106,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                          "$ref": "#/definitions/touchly_internal_db.Contact"
+                          "$ref": "#/definitions/UpdateContactRequest"
                         }
                     }
                 ],
@@ -285,7 +288,7 @@
               "in": "body",
               "required": true,
               "schema": {
-                "$ref": "#/definitions/touchly_internal_db.Address"
+                "$ref": "#/definitions/CreateAddressRequest"
               }
             }
           ],
@@ -331,9 +334,7 @@
                         "description": "OK"
                     }
                 }
-            }
-        },
-        "/api/contacts/{id}/saved": {
+            },
             "delete": {
                 "security": [
                     {
@@ -741,8 +742,37 @@
         }
     },
     "definitions": {
+      "CreateAddressRequest": {
+        "type": "object",
+        "required": [
+          "label",
+          "lat",
+          "lng",
+          "name"
+        ],
+        "properties": {
+          "external_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "UpdateContactRequest": {
         "type": "object",
+        "required": [
+          "name"
+        ],
         "properties": {
           "about": {
             "type": "string"
@@ -1092,5 +1122,12 @@
                 }
             }
         }
+    },
+  "securityDefinitions": {
+    "ApiKeyAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
     }
 }

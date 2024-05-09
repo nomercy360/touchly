@@ -6,6 +6,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/swaggo/echo-swagger"
 	"log"
 	"log/slog"
 	"net/http"
@@ -42,12 +43,17 @@ type AWSConfig struct {
 	Endpoint  string `env:"AWS_ENDPOINT,required"`
 }
 
-// @title Peatch API
+// @title Touchly API
 // @version 1.0
 // @description This is a sample server ClanPlatform server.
 
 // @host localhost:8080
 // @BasePath /
+// @schemes http
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 func main() {
 	cfg := config{}
 	if err := env.Parse(&cfg); err != nil {
@@ -147,7 +153,7 @@ func main() {
 
 	tr.RegisterRoutes(e)
 
-	//e.GET("/swagger/*", echoSwagger.WrapHandler)
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()

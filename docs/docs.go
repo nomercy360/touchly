@@ -109,7 +109,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/touchly_internal_db.Contact"
+                            "$ref": "#/definitions/UpdateContactRequest"
                         }
                     }
                 ],
@@ -291,7 +291,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/touchly_internal_db.Address"
+                            "$ref": "#/definitions/CreateAddressRequest"
                         }
                     }
                 ],
@@ -337,9 +337,7 @@ const docTemplate = `{
                         "description": "OK"
                     }
                 }
-            }
-        },
-        "/api/contacts/{id}/saved": {
+            },
             "delete": {
                 "security": [
                     {
@@ -747,8 +745,37 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "CreateAddressRequest": {
+            "type": "object",
+            "required": [
+                "label",
+                "lat",
+                "lng",
+                "name"
+            ],
+            "properties": {
+                "external_id": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "lat": {
+                    "type": "number"
+                },
+                "lng": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "UpdateContactRequest": {
             "type": "object",
+            "required": [
+                "name"
+            ],
             "properties": {
                 "about": {
                     "type": "string"
@@ -1098,6 +1125,13 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
     }
 }`
 
@@ -1106,8 +1140,8 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:8080",
 	BasePath:         "/",
-	Schemes:          []string{},
-	Title:            "Peatch API",
+	Schemes:          []string{"http"},
+	Title:            "Touchly API",
 	Description:      "This is a sample server ClanPlatform server.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

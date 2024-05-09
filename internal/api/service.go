@@ -21,7 +21,7 @@ type storage interface {
 	GetOTPByCode(code string, userID int64) (*db.OTP, error)
 	CreateOTP(otp db.OTP) (*db.OTP, error)
 
-	CreateContact(contact db.Contact) (*db.Contact, error)
+	CreateContact(userID int64, contact db.Contact, tags *[]db.Tag, links *[]db.Link) (*db.Contact, error)
 	DeleteContact(userID, id int64) error
 	UpdateContact(userID, contactID int64, tags *[]db.Tag, links *[]db.Link, updates map[string]interface{}) (*db.Contact, error)
 	ListContacts(params db.ContactQuery) (db.ContactsPage, error)

@@ -202,7 +202,9 @@ func (api *api) LoginUser(email, password string) (*string, error) {
 	}
 
 	user, err := api.storage.GetUserByEmail(email)
-	if err != nil {
+	if err != nil && errors.Is(err, db.ErrNotFound) {
+		return nil, errors.New("invalid credentials")
+	} else if err != nil {
 		return nil, err
 	}
 

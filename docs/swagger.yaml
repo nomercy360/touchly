@@ -1,5 +1,23 @@
 basePath: /
 definitions:
+  CreateAddressRequest:
+    properties:
+      external_id:
+        type: string
+      label:
+        type: string
+      lat:
+        type: number
+      lng:
+        type: number
+      name:
+        type: string
+    required:
+      - label
+      - lat
+      - lng
+      - name
+    type: object
   UpdateContactRequest:
     properties:
       about:
@@ -28,6 +46,8 @@ definitions:
         type: array
       website:
         type: string
+    required:
+      - name
     type: object
   UploadURL:
     properties:
@@ -233,7 +253,7 @@ host: localhost:8080
 info:
   contact: { }
   description: This is a sample server ClanPlatform server.
-  title: Peatch API
+  title: Touchly API
   version: "1.0"
 paths:
   /api/contacts:
@@ -293,7 +313,7 @@ paths:
           name: contact
           required: true
           schema:
-            $ref: '#/definitions/touchly_internal_db.Contact'
+            $ref: '#/definitions/UpdateContactRequest'
       produces:
         - application/json
       responses:
@@ -389,7 +409,7 @@ paths:
           name: address
           required: true
           schema:
-            $ref: '#/definitions/touchly_internal_db.Address'
+            $ref: '#/definitions/CreateAddressRequest'
       produces:
         - application/json
       responses:
@@ -403,27 +423,6 @@ paths:
       tags:
         - contacts
   /api/contacts/{id}/save:
-    post:
-      consumes:
-        - application/json
-      description: save contact
-      parameters:
-        - description: contact id
-          in: path
-          name: id
-          required: true
-          type: integer
-      produces:
-        - application/json
-      responses:
-        "200":
-          description: OK
-      security:
-        - JWT: [ ]
-      summary: Save contact
-      tags:
-        - contacts
-  /api/contacts/{id}/saved:
     delete:
       consumes:
         - application/json
@@ -448,6 +447,26 @@ paths:
       security:
         - JWT: [ ]
       summary: Delete saved contact
+      tags:
+        - contacts
+    post:
+      consumes:
+        - application/json
+      description: save contact
+      parameters:
+        - description: contact id
+          in: path
+          name: id
+          required: true
+          type: integer
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+        - JWT: [ ]
+      summary: Save contact
       tags:
         - contacts
   /api/contacts/{id}/visibility:
@@ -698,4 +717,11 @@ paths:
       summary: Get upload URL
       tags:
         - uploads
+schemes:
+  - http
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

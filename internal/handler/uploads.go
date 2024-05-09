@@ -17,7 +17,11 @@ import (
 // @Router       /api/uploads/get-url [post]
 func (tr *transport) GetUploadURLHandler(c echo.Context) error {
 	fileName := c.QueryParam("file_name")
-	userID := getUserID(c)
+	userID, err := mustUserID(c)
+
+	if err != nil {
+		return err
+	}
 
 	res, err := tr.api.GetPresignedURL(userID, fileName)
 

@@ -135,7 +135,11 @@ func (tr *transport) SetPasswordHandler(c echo.Context) error {
 // @Security     JWT
 // @Router       /api/me [get]
 func (tr *transport) GetMeHandler(c echo.Context) error {
-	userID := getUserID(c)
+	userID, err := mustUserID(c)
+
+	if err != nil {
+		return err
+	}
 
 	user, err := tr.api.GetUserByID(userID)
 

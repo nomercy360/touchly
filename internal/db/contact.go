@@ -39,9 +39,9 @@ type Contact struct {
 	CreatedAt        time.Time         `db:"created_at" json:"created_at"`
 	UpdatedAt        time.Time         `db:"updated_at" json:"updated_at"`
 	Address          *Address          `db:"-" json:"address"`
-	PhoneNumber      string            `db:"phone_number" json:"phone_number"`
-	PhoneCallingCode string            `db:"phone_calling_code" json:"phone_calling_code"`
-	Email            string            `db:"email" json:"email"`
+	PhoneNumber      *string           `db:"phone_number" json:"phone_number"`
+	PhoneCallingCode *string           `db:"phone_calling_code" json:"phone_calling_code"`
+	Email            *string           `db:"email" json:"email"`
 	Tags             []Tag             `db:"-" json:"tags"`
 	SocialLinks      []Link            `db:"-" json:"social_links"`
 	DeletedAt        *time.Time        `db:"deleted_at" json:"deleted_at"`
@@ -130,7 +130,7 @@ func parsePoint(src string, p *Point) error {
 
 type Address struct {
 	ID         int64      `db:"id" json:"id"`
-	ExternalID string     `db:"external_id" json:"external_id"`
+	ExternalID *string    `db:"external_id" json:"external_id"`
 	ContactID  int64      `db:"contact_id" json:"contact_id"`
 	Label      string     `db:"label" json:"label"`
 	Name       string     `db:"name" json:"name"`
@@ -274,7 +274,7 @@ func (s *storage) ListContacts(params ContactQuery) (ContactsPage, error) {
 	return contactsPage, nil
 }
 
-func (s *storage) CreateContact(contact Contact) (*Contact, error) {
+func (s *storage) CreateContact(userID int64, contact Contact, tags *[]Tag, links *[]Link) (*Contact, error) {
 	tx, err := s.pg.Beginx()
 	if err != nil {
 		return nil, err
@@ -292,7 +292,7 @@ func (s *storage) CreateContact(contact Contact) (*Contact, error) {
 		RETURNING id, name, avatar, activity_name, about, website, country_code, phone_number, phone_calling_code, email, user_id, created_at, updated_at, visibility, deleted_at
 	`
 
-	err = tx.QueryRow(query, contact.Name, contact.Avatar, contact.ActivityName, contact.About, contact.Website, contact.CountryCode, contact.PhoneNumber, contact.PhoneCallingCode, contact.Email, contact.UserID).Scan(
+	err = tx.QueryRow(query, contact.Name, contact.Avatar, contact.ActivityName, contact.About, contact.Website, contact.CountryCode, contact.PhoneNumber, contact.PhoneCallingCode, contact.Email, userID).Scan(
 		&res.ID, &res.Name, &res.Avatar, &res.ActivityName, &res.About, &res.Website, &res.CountryCode, &res.PhoneNumber, &res.PhoneCallingCode, &res.Email, &res.UserID, &res.CreatedAt, &res.UpdatedAt, &res.Visibility, &res.DeletedAt,
 	)
 
@@ -300,8 +300,8 @@ func (s *storage) CreateContact(contact Contact) (*Contact, error) {
 		return nil, err
 	}
 
-	if len(contact.Tags) > 0 {
-		for _, tag := range contact.Tags {
+	if tags != nil {
+		for _, tag := range *tags {
 			if _, err = tx.Exec("INSERT INTO contact_tags (contact_id, tag_id) VALUES ($1, $2)", res.ID, tag.ID); err != nil {
 				return nil, err
 			}
@@ -310,8 +310,8 @@ func (s *storage) CreateContact(contact Contact) (*Contact, error) {
 		}
 	}
 
-	if len(contact.SocialLinks) > 0 {
-		for _, link := range contact.SocialLinks {
+	if links != nil {
+		for _, link := range *links {
 			row := tx.QueryRow("INSERT INTO social_media_links (contact_id, type, link) VALUES ($1, $2, $3) RETURNING id", res.ID, link.Type, link.Link)
 
 			if err = row.Scan(&link.ID); err != nil {
@@ -339,7 +339,7 @@ func (s *storage) DeleteContact(userID, id int64) error {
 	rowsAffected, _ := res.RowsAffected()
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("contact with id %d not found", id)
+		return ErrNotFound
 	}
 
 	return nil
@@ -451,7 +451,9 @@ func (s *storage) GetContact(userID, id int64) (*Contact, error) {
 
 	err := s.pg.Get(&contact, query, id, userID)
 
-	if err != nil {
+	if err != nil && !IsNoRowsError(err) {
+		return nil, ErrNotFound
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -477,11 +479,9 @@ func (s *storage) GetContact(userID, id int64) (*Contact, error) {
 
 	err = s.pg.Get(&address, "SELECT id, external_id, contact_id, label, name, ST_AsText(location) as location, created_at, updated_at, deleted_at FROM addresses WHERE contact_id=$1", id)
 
-	if err != nil {
-		if IsNoRowsError(err) {
-			return &contact, nil
-		}
-
+	if err != nil && IsNoRowsError(err) {
+		return &contact, nil
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -493,7 +493,9 @@ func (s *storage) GetContact(userID, id int64) (*Contact, error) {
 func (s *storage) SaveContact(userID, contactID int64) error {
 	_, err := s.pg.Exec("INSERT INTO saved_contacts (user_id, contact_id) VALUES ($1, $2)", userID, contactID)
 
-	if err != nil {
+	if err != nil && IsDuplicationError(err) {
+		return ErrAlreadyExists
+	} else if err != nil {
 		return err
 	}
 
@@ -501,10 +503,14 @@ func (s *storage) SaveContact(userID, contactID int64) error {
 }
 
 func (s *storage) DeleteSavedContact(userID, contactID int64) error {
-	_, err := s.pg.Exec("DELETE FROM saved_contacts WHERE user_id=$1 AND contact_id=$2", userID, contactID)
+	rows, err := s.pg.Exec("DELETE FROM saved_contacts WHERE user_id=$1 AND contact_id=$2", userID, contactID)
 
 	if err != nil {
 		return err
+	}
+
+	if rowsAffected, _ := rows.RowsAffected(); rowsAffected == 0 {
+		return ErrNotFound
 	}
 
 	return nil
@@ -533,14 +539,14 @@ func (s *storage) CreateContactAddress(contactID int64, address Address) (*Addre
 		INSERT INTO addresses
 			(external_id, contact_id, label, name, location)
 		VALUES ($1, $2, $3, $4, ST_SetSRID(ST_Point($5, $6), 4326))
-		RETURNING id
+		RETURNING id, external_id, contact_id, label, name, ST_AsText(location) as location, created_at, updated_at, deleted_at
 	`
 
-	err := s.pg.QueryRow(
+	err := s.pg.QueryRowx(
 		query, address.ExternalID, contactID,
 		address.Label, address.Name, address.Location.Lng,
 		address.Location.Lat,
-	).Scan(&address.ID)
+	).StructScan(&address)
 
 	if err != nil {
 		return nil, err

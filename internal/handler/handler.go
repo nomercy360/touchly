@@ -44,13 +44,13 @@ type api interface {
 	ListMyContacts(userID int64) (db.ContactsPage, error)
 
 	ListContacts(userID int64, tagIDs []int, search string, lat float64, lng float64, radius int, page, pageSize int) (db.ContactsPage, error)
-	CreateContact(userID int64, contact db.Contact) (*db.Contact, error)
+	CreateContact(userID int64, contact api2.CreateContactRequest) (*db.Contact, error)
 	GetContact(userID, id int64) (*db.Contact, error)
 	UpdateContact(userID, contactID int64, contact api2.UpdateContactRequest) (*db.Contact, error)
 	UpdateContactVisibility(userID, contactID int64, visibility db.ContactVisibility) error
 	DeleteContact(userID, id int64) error
 
-	CreateContactAddress(userID, contactID int64, address db.Address) (*db.Address, error)
+	CreateContactAddress(userID, contactID int64, address api2.CreateAddressRequest) (*db.Address, error)
 
 	ListTags() ([]db.Tag, error)
 	CreateTag(tag db.Tag) (*db.Tag, error)

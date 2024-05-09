@@ -49,7 +49,9 @@ func (s *storage) GetUserByEmail(email string) (*User, error) {
 
 	err := s.pg.Get(&user, query, email)
 
-	if err != nil {
+	if err != nil && !IsNoRowsError(err) {
+		return nil, ErrNotFound
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -117,7 +119,9 @@ func (s *storage) GetOTPByCode(code string, userID int64) (*OTP, error) {
 
 	err := s.pg.Get(&otp, query, code, userID)
 
-	if err != nil {
+	if err != nil && !IsNoRowsError(err) {
+		return nil, ErrNotFound
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -134,7 +138,9 @@ func (s *storage) CreateOTP(otp OTP) (*OTP, error) {
 
 	err := s.pg.Get(&otp.ID, query, otp.UserID, otp.OTPCode, otp.ExpiresAt)
 
-	if err != nil {
+	if err != nil && !IsNoRowsError(err) {
+		return nil, ErrNotFound
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -152,10 +158,10 @@ func (s *storage) GetUserByID(userID int64) (*User, error) {
 
 	err := s.pg.Get(&user, query, userID)
 
-	if err != nil {
-		if IsNoRowsError(err) {
-			return nil, ErrNotFound
-		}
+	if err != nil && !IsNoRowsError(err) {
+		return nil, ErrNotFound
+	} else if err != nil {
+		return nil, err
 	}
 
 	return &user, nil
