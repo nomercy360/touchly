@@ -1,7 +1,7 @@
-package transport
+package handler
 
 import (
-	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"strconv"
@@ -10,26 +10,10 @@ import (
 	"touchly/internal/db"
 )
 
-func getIDFromRequest(r *http.Request) (int64, error) {
-	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
-
-	if err != nil {
-		return 0, err
-	}
-
-	return id, nil
-}
-
-func getUserIDFromRequest(r *http.Request) int64 {
-	ctx := r.Context()
-
-	userID := ctx.Value("userID")
-
-	if userID == nil {
-		return 0
-	}
-
-	return userID.(int64)
+func getUserID(c echo.Context) int64 {
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*api2.JWTClaims)
+	return claims.UserID
 }
 
 // CreateContactHandler godoc
@@ -44,20 +28,18 @@ func getUserIDFromRequest(r *http.Request) int64 {
 // @Router       /api/contacts [post]
 func (tr *transport) CreateContactHandler(c echo.Context) error {
 	var contact db.Contact
-	if err := decodeRequest(r, &contact); err != nil {
-		WriteError(r, w, err)
-		return
+	if err := c.Bind(&contact); err != nil {
+		return err
 	}
 
-	userID := getUserIDFromRequest(r)
+	userID := getUserID(c)
 
 	createdContact, err := tr.api.CreateContact(userID, contact)
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteJSON(w, http.StatusCreated, createdContact)
+	return c.JSON(http.StatusCreated, createdContact)
 }
 
 // GetContactHandler godoc
@@ -70,17 +52,16 @@ func (tr *transport) CreateContactHandler(c echo.Context) error {
 // @Success      200  {object}   db.Contact
 // @Router       /api/contacts/{id} [get]
 func (tr *transport) GetContactHandler(c echo.Context) error {
-	id, _ := getIDFromRequest(r)
-	userID := getUserIDFromRequest(r)
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	userID := getUserID(c)
 
 	contact, err := tr.api.GetContact(userID, id)
 
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteJSON(w, http.StatusOK, contact)
+	return c.JSON(http.StatusOK, contact)
 }
 
 // UpdateContactHandler godoc
@@ -90,28 +71,26 @@ func (tr *transport) GetContactHandler(c echo.Context) error {
 // @Accept       json
 // @Produce      json
 // @Param        id   path     int     true  "contact id"
-// @Param        contact   body     api.UpdateContactRequest     true  "contact"
+// @Param        contact   body     UpdateContactRequest     true  "contact"
 // @Success      200  {object}   nil
 // @Security     JWT
 // @Router       /api/contacts/{id} [put]
 func (tr *transport) UpdateContactHandler(c echo.Context) error {
 	var contact api2.UpdateContactRequest
-	if err := decodeRequest(r, &contact); err != nil {
-		WriteError(r, w, err)
-		return
+	if err := c.Bind(&contact); err != nil {
+		return err
 	}
 
-	userID := getUserIDFromRequest(r)
-	cID, _ := getIDFromRequest(r)
+	userID := getUserID(c)
+	cID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 
 	res, err := tr.api.UpdateContact(userID, cID, contact)
 
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteJSON(w, http.StatusOK, res)
+	return c.JSON(http.StatusOK, res)
 }
 
 // DeleteContactHandler godoc
@@ -125,21 +104,15 @@ func (tr *transport) UpdateContactHandler(c echo.Context) error {
 // @Security     JWT
 // @Router       /api/contacts/{id} [delete]
 func (tr *transport) DeleteContactHandler(c echo.Context) error {
-	id, err := getIDFromRequest(r)
-	if err != nil {
-		WriteError(r, w, err)
-		return
+	id, _ := getID(c)
+
+	userID := getUserID(c)
+
+	if err := tr.api.DeleteContact(userID, id); err != nil {
+		return err
 	}
 
-	userID := getUserIDFromRequest(r)
-
-	err = tr.api.DeleteContact(userID, id)
-	if err != nil {
-		WriteError(r, w, err)
-		return
-	}
-
-	WriteOK(w)
+	return c.NoContent(http.StatusOK)
 }
 
 func queryToIntArray(query string) ([]int, error) {
@@ -179,29 +152,28 @@ func queryToIntArray(query string) ([]int, error) {
 // @Param        radius    query    int     false  "radius in km"
 // @Router       /api/contacts [get]
 func (tr *transport) ListContactsHandler(c echo.Context) error {
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	page, _ := strconv.Atoi(c.QueryParam("page"))
+	pageSize, _ := strconv.Atoi(c.QueryParam("page_size"))
 
-	search := r.URL.Query().Get("search")
+	search := c.QueryParam("search")
 
-	tags := r.URL.Query().Get("tag")
+	tags := c.QueryParam("tag")
 
 	tagIDs, _ := queryToIntArray(tags)
-	userID := getUserIDFromRequest(r)
+	userID := getUserID(c)
 
-	lat, _ := strconv.ParseFloat(r.URL.Query().Get("lat"), 64)
-	lng, _ := strconv.ParseFloat(r.URL.Query().Get("lng"), 64)
+	lat, _ := strconv.ParseFloat(c.QueryParam("lat"), 64)
+	lng, _ := strconv.ParseFloat(c.QueryParam("lng"), 64)
 
-	radius, _ := strconv.Atoi(r.URL.Query().Get("radius"))
+	radius, _ := strconv.Atoi(c.QueryParam("radius"))
 
 	contacts, err := tr.api.ListContacts(userID, tagIDs, search, lat, lng, radius, page, pageSize)
 
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteJSON(w, http.StatusOK, contacts)
+	return c.JSON(http.StatusOK, contacts)
 }
 
 // ListSavedContactsHandler godoc
@@ -210,25 +182,19 @@ func (tr *transport) ListContactsHandler(c echo.Context) error {
 // @Tags         contacts
 // @Accept       json
 // @Produce      json
-// @Param        id   path     int     true  "user id"
 // @Success      200  {array}   db.Contact
 // @Security     JWT
 // @Router       /api/contacts/saved [get]
 func (tr *transport) ListSavedContactsHandler(c echo.Context) error {
-	userID := getUserIDFromRequest(r)
+	userID := getUserID(c)
 
 	contacts, err := tr.api.ListSavedContacts(userID)
 
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteJSON(w, http.StatusOK, contacts)
-}
-
-type SaveContactRequest struct {
-	ContactID int64 `json:"contact_id" example:"1"`
+	return c.JSON(http.StatusOK, contacts)
 }
 
 // SaveContactHandler godoc
@@ -237,28 +203,21 @@ type SaveContactRequest struct {
 // @Tags         contacts
 // @Accept       json
 // @Produce      json
-// @Param        id   path     int     true  "user id"
-// @Param		 account	   body	   transport.SaveContactRequest	true	"contact id to save"
+// @Param        id   path     int     true  "contact id"
 // @Success      200  {object}   nil
 // @Security     JWT
 // @Router       /api/contacts/{id}/save [post]
 func (tr *transport) SaveContactHandler(c echo.Context) error {
-	var data SaveContactRequest
+	userID := getUserID(c)
 
-	userID := getUserIDFromRequest(r)
+	contID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 
-	if err := decodeRequest(r, &data); err != nil {
-		WriteError(r, w, err)
-		return
-	}
-
-	err := tr.api.SaveContact(userID, data.ContactID)
+	err := tr.api.SaveContact(userID, contID)
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteOK(w)
+	return c.NoContent(http.StatusCreated)
 }
 
 type DeleteSavedContactRequest struct {
@@ -272,27 +231,25 @@ type DeleteSavedContactRequest struct {
 // @Accept       json
 // @Produce      json
 // @Param        id   path     int     true  "user id"
-// @Param		 account	   body	   transport.DeleteSavedContactRequest	true	"contact id to delete"
+// @Param		 account	   body	   handler.DeleteSavedContactRequest	true	"contact id to delete"
 // @Success      200  {object}   nil
 // @Security     JWT
 // @Router       /api/contacts/{id}/saved [delete]
 func (tr *transport) DeleteSavedContactHandler(c echo.Context) error {
 	var data DeleteSavedContactRequest
 
-	userID := getUserIDFromRequest(r)
+	userID := getUserID(c)
 
-	if err := decodeRequest(r, &data); err != nil {
-		WriteError(r, w, err)
-		return
+	if err := c.Bind(&data); err != nil {
+		return err
 	}
 
 	err := tr.api.DeleteSavedContact(userID, data.ContactID)
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteOK(w)
+	return c.NoContent(http.StatusOK)
 }
 
 // CreateContactAddressHandler godoc
@@ -308,23 +265,23 @@ func (tr *transport) DeleteSavedContactHandler(c echo.Context) error {
 // @Router       /api/contacts/{id}/address [post]
 func (tr *transport) CreateContactAddressHandler(c echo.Context) error {
 	var address db.Address
-	if err := decodeRequest(r, &address); err != nil {
-		WriteError(r, w, err)
-		return
+	if err := c.Bind(&address); err != nil {
+		return err
 	}
 
-	userID := getUserIDFromRequest(r)
-	contactID, _ := getIDFromRequest(r)
+	if err := c.Validate(address); err != nil {
+		return err
+	}
 
-	address.ContactID = contactID
+	userID := getUserID(c)
+	contactID, _ := getID(c)
 
-	createdAddress, err := tr.api.CreateContactAddress(userID, address)
+	createdAddress, err := tr.api.CreateContactAddress(userID, contactID, address)
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteJSON(w, http.StatusCreated, createdAddress)
+	return c.JSON(http.StatusCreated, createdAddress)
 }
 
 type UpdateContactVisibilityRequest struct {
@@ -338,28 +295,26 @@ type UpdateContactVisibilityRequest struct {
 // @Accept       json
 // @Produce      json
 // @Param        id   path     int     true  "contact id"
-// @Param		 account	   body	   transport.UpdateContactVisibilityRequest	true	"visibility"
+// @Param		 account	   body	   handler.UpdateContactVisibilityRequest	true	"visibility"
 // @Success      200  {object}   nil
 // @Security     JWT
 // @Router       /api/contacts/{id}/visibility [put]
 func (tr *transport) UpdateContactVisibilityHandler(c echo.Context) error {
 	var data UpdateContactVisibilityRequest
-	if err := decodeRequest(r, &data); err != nil {
-		WriteError(r, w, err)
-		return
+	if err := c.Bind(&data); err != nil {
+		return err
 	}
 
-	userID := getUserIDFromRequest(r)
-	cID, _ := getIDFromRequest(r)
+	userID := getUserID(c)
+	cID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 
 	err := tr.api.UpdateContactVisibility(userID, cID, data.Visibility)
 
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteOK(w)
+	return c.NoContent(http.StatusOK)
 }
 
 // ListMyContactsHandler godoc
@@ -372,7 +327,7 @@ func (tr *transport) UpdateContactVisibilityHandler(c echo.Context) error {
 // @Security     JWT
 // @Router       /api/me/contacts [get]
 func (tr *transport) ListMyContactsHandler(c echo.Context) error {
-	userID := getUserIDFromRequest(c)
+	userID := getUserID(c)
 
 	contacts, err := tr.api.ListMyContacts(userID)
 

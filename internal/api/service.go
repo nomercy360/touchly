@@ -24,12 +24,12 @@ type storage interface {
 	CreateContact(contact db.Contact) (*db.Contact, error)
 	DeleteContact(userID, id int64) error
 	UpdateContact(userID, contactID int64, tags *[]db.Tag, links *[]db.Link, updates map[string]interface{}) (*db.Contact, error)
-	ListContacts(userID int64, tagIDs []int, search string, lat float64, lng float64, radius int, page, pageSize int) (db.ContactsPage, error)
+	ListContacts(params db.ContactQuery) (db.ContactsPage, error)
 	GetContact(userID, id int64) (*db.Contact, error)
 	SaveContact(userID, contactID int64) error
 	DeleteSavedContact(userID, contactID int64) error
 	ListSavedContacts(userID int64) ([]db.Contact, error)
-	CreateContactAddress(address db.Address) (*db.Address, error)
+	CreateContactAddress(contactID int64, address db.Address) (*db.Address, error)
 	GetContactsByUserID(userID int64) (db.ContactsPage, error)
 
 	UpdateContactVisibility(userID, contactID int64, visibility db.ContactVisibility) error
@@ -48,13 +48,14 @@ type api struct {
 	emailClient emailClient
 	s3Client    s3Client
 	logger      *log.Logger
+	jwtSecret   string
 }
 
-func NewApi(storage storage, emailClient emailClient, s3Client s3Client) *api {
+func NewApi(storage storage, emailClient emailClient, s3Client s3Client, jwtSecret string) *api {
 	return &api{
 		storage:     storage,
 		emailClient: emailClient,
 		s3Client:    s3Client,
-		logger:      log.New(log.Writer(), "api: ", log.LstdFlags),
+		jwtSecret:   jwtSecret,
 	}
 }

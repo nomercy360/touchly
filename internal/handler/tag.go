@@ -1,6 +1,7 @@
-package transport
+package handler
 
 import (
+	"github.com/labstack/echo/v4"
 	"net/http"
 	"touchly/internal/db"
 )
@@ -13,15 +14,14 @@ import (
 // @Produce      json
 // @Success      200  {object}   []db.Tag
 // @Router       /api/tags [get]
-func (tr *transport) ListTagsHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) ListTagsHandler(c echo.Context) error {
 	tags, err := tr.api.ListTags()
 
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteJSON(w, http.StatusOK, tags)
+	return c.JSON(http.StatusOK, tags)
 }
 
 // CreateTagHandler godoc
@@ -34,20 +34,18 @@ func (tr *transport) ListTagsHandler(w http.ResponseWriter, r *http.Request) {
 // @Success      201  {object}   db.Tag
 // @Security     JWT
 // @Router       /api/tags [post]
-func (tr *transport) CreateTagHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) CreateTagHandler(c echo.Context) error {
 	var tag db.Tag
-	if err := decodeRequest(r, &tag); err != nil {
-		WriteError(r, w, err)
-		return
+	if err := c.Bind(&tag); err != nil {
+		return err
 	}
 
 	createdTag, err := tr.api.CreateTag(tag)
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteJSON(w, http.StatusCreated, createdTag)
+	return c.JSON(http.StatusCreated, createdTag)
 }
 
 // DeleteTagHandler godoc
@@ -60,18 +58,16 @@ func (tr *transport) CreateTagHandler(w http.ResponseWriter, r *http.Request) {
 // @Success      200  {object}   nil
 // @Security     JWT
 // @Router       /api/tags/{id} [delete]
-func (tr *transport) DeleteTagHandler(w http.ResponseWriter, r *http.Request) {
-	id, err := getIDFromRequest(r)
+func (tr *transport) DeleteTagHandler(c echo.Context) error {
+	id, err := getID(c)
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
 	err = tr.api.DeleteTag(id)
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteOK(w)
+	return c.NoContent(http.StatusOK)
 }

@@ -1,5 +1,6 @@
+basePath: /
 definitions:
-  api.UpdateContactRequest:
+  UpdateContactRequest:
     properties:
       about:
         type: string
@@ -19,160 +20,21 @@ definitions:
         type: string
       social_links:
         items:
-          $ref: '#/definitions/db.Link'
+          $ref: '#/definitions/touchly_internal_db.Link'
         type: array
       tags:
         items:
-          $ref: '#/definitions/db.Tag'
+          $ref: '#/definitions/touchly_internal_db.Tag'
         type: array
       website:
         type: string
     type: object
-  api.UploadURL:
+  UploadURL:
     properties:
       url:
         type: string
     type: object
-  db.Address:
-    properties:
-      contact_id:
-        type: integer
-      created_at:
-        type: string
-      deleted_at:
-        type: string
-      external_id:
-        type: string
-      id:
-        type: integer
-      label:
-        type: string
-      location:
-        $ref: '#/definitions/db.Point'
-      name:
-        type: string
-      updated_at:
-        type: string
-    type: object
-  db.Contact:
-    properties:
-      about:
-        type: string
-      activity_name:
-        type: string
-      address:
-        $ref: '#/definitions/db.Address'
-      avatar:
-        type: string
-      country_code:
-        type: string
-      created_at:
-        type: string
-      deleted_at:
-        type: string
-      email:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-      phone_calling_code:
-        type: string
-      phone_number:
-        type: string
-      saves_amount:
-        type: integer
-      social_links:
-        items:
-          $ref: '#/definitions/db.Link'
-        type: array
-      tags:
-        items:
-          $ref: '#/definitions/db.Tag'
-        type: array
-      updated_at:
-        type: string
-      user_id:
-        type: integer
-      views_amount:
-        type: integer
-      visibility:
-        $ref: '#/definitions/db.ContactVisibility'
-      website:
-        type: string
-    type: object
-  db.ContactListEntry:
-    properties:
-      about:
-        type: string
-      activity_name:
-        type: string
-      avatar:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-      saves_amount:
-        type: integer
-      user_id:
-        type: integer
-      views_amount:
-        type: integer
-      visibility:
-        $ref: '#/definitions/db.ContactVisibility'
-    type: object
-  db.ContactVisibility:
-    enum:
-      - public
-      - private
-      - shared_link
-    type: string
-    x-enum-varnames:
-      - ContactVisibilityPublic
-      - ContactVisibilityPrivate
-      - ContactVisibilitySharedLink
-  db.ContactsPage:
-    properties:
-      contacts:
-        items:
-          $ref: '#/definitions/db.ContactListEntry'
-        type: array
-      page:
-        type: integer
-      page_size:
-        type: integer
-      total_count:
-        type: integer
-    type: object
-  db.Link:
-    properties:
-      contact_id:
-        type: integer
-      id:
-        type: integer
-      label:
-        type: string
-      link:
-        type: string
-      type:
-        type: string
-    type: object
-  db.Point:
-    properties:
-      lat:
-        type: number
-      lng:
-        type: number
-    type: object
-  db.Tag:
-    properties:
-      id:
-        type: integer
-      name:
-        type: string
-    type: object
-  db.User:
+  User:
     properties:
       created_at:
         type: string
@@ -187,55 +49,191 @@ definitions:
       updated_at:
         type: string
     type: object
-  transport.DeleteSavedContactRequest:
+  internal_handler.DeleteSavedContactRequest:
     properties:
       contact_id:
         example: 1
         type: integer
     type: object
-  transport.LoginUserRequest:
+  internal_handler.LoginUserRequest:
     properties:
       email:
         type: string
       password:
         type: string
     type: object
-  transport.SaveContactRequest:
-    properties:
-      contact_id:
-        example: 1
-        type: integer
-    type: object
-  transport.SendOTPRequest:
+  internal_handler.SendOTPRequest:
     properties:
       email:
         type: string
     type: object
-  transport.SetPasswordRequest:
+  internal_handler.SetPasswordRequest:
     properties:
       email:
         type: string
       password:
         type: string
     type: object
-  transport.UpdateContactVisibilityRequest:
+  internal_handler.UpdateContactVisibilityRequest:
     properties:
       visibility:
         allOf:
-          - $ref: '#/definitions/db.ContactVisibility'
+          - $ref: '#/definitions/touchly_internal_db.ContactVisibility'
         example: public
     type: object
-  transport.VerifyOTPRequest:
+  internal_handler.VerifyOTPRequest:
     properties:
       email:
         type: string
       otp:
         type: string
     type: object
+  touchly_internal_db.Address:
+    properties:
+      contact_id:
+        type: integer
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      external_id:
+        type: string
+      id:
+        type: integer
+      label:
+        type: string
+      location:
+        $ref: '#/definitions/touchly_internal_db.Point'
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  touchly_internal_db.Contact:
+    properties:
+      about:
+        type: string
+      activity_name:
+        type: string
+      address:
+        $ref: '#/definitions/touchly_internal_db.Address'
+      avatar:
+        type: string
+      country_code:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      phone_calling_code:
+        type: string
+      phone_number:
+        type: string
+      saves_amount:
+        type: integer
+      social_links:
+        items:
+          $ref: '#/definitions/touchly_internal_db.Link'
+        type: array
+      tags:
+        items:
+          $ref: '#/definitions/touchly_internal_db.Tag'
+        type: array
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+      views_amount:
+        type: integer
+      visibility:
+        $ref: '#/definitions/touchly_internal_db.ContactVisibility'
+      website:
+        type: string
+    type: object
+  touchly_internal_db.ContactListEntry:
+    properties:
+      about:
+        type: string
+      activity_name:
+        type: string
+      avatar:
+        type: string
+      id:
+        type: integer
+      is_saved:
+        type: boolean
+      name:
+        type: string
+      saves_amount:
+        type: integer
+      user_id:
+        type: integer
+      views_amount:
+        type: integer
+      visibility:
+        $ref: '#/definitions/touchly_internal_db.ContactVisibility'
+    type: object
+  touchly_internal_db.ContactVisibility:
+    enum:
+      - public
+      - private
+      - shared_link
+    type: string
+    x-enum-varnames:
+      - ContactVisibilityPublic
+      - ContactVisibilityPrivate
+      - ContactVisibilitySharedLink
+  touchly_internal_db.ContactsPage:
+    properties:
+      contacts:
+        items:
+          $ref: '#/definitions/touchly_internal_db.ContactListEntry'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  touchly_internal_db.Link:
+    properties:
+      contact_id:
+        type: integer
+      id:
+        type: integer
+      label:
+        type: string
+      link:
+        type: string
+      type:
+        type: string
+    type: object
+  touchly_internal_db.Point:
+    properties:
+      lat:
+        type: number
+      lng:
+        type: number
+    type: object
+  touchly_internal_db.Tag:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+host: localhost:8080
 info:
   contact: { }
-  description: API Documentation for the Touchly Backend
-  title: Touchly API
+  description: This is a sample server ClanPlatform server.
+  title: Peatch API
   version: "1.0"
 paths:
   /api/contacts:
@@ -281,7 +279,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/db.ContactsPage'
+            $ref: '#/definitions/touchly_internal_db.ContactsPage'
       summary: List contacts
       tags:
         - contacts
@@ -295,14 +293,14 @@ paths:
           name: contact
           required: true
           schema:
-            $ref: '#/definitions/db.Contact'
+            $ref: '#/definitions/touchly_internal_db.Contact'
       produces:
         - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/db.Contact'
+            $ref: '#/definitions/touchly_internal_db.Contact'
       security:
         - JWT: [ ]
       summary: Create contact
@@ -345,7 +343,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/db.Contact'
+            $ref: '#/definitions/touchly_internal_db.Contact'
       summary: Get contact
       tags:
         - contacts
@@ -364,7 +362,7 @@ paths:
           name: contact
           required: true
           schema:
-            $ref: '#/definitions/api.UpdateContactRequest'
+            $ref: '#/definitions/UpdateContactRequest'
       produces:
         - application/json
       responses:
@@ -391,14 +389,14 @@ paths:
           name: address
           required: true
           schema:
-            $ref: '#/definitions/db.Address'
+            $ref: '#/definitions/touchly_internal_db.Address'
       produces:
         - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/db.Address'
+            $ref: '#/definitions/touchly_internal_db.Address'
       security:
         - JWT: [ ]
       summary: Create contact address
@@ -410,17 +408,11 @@ paths:
         - application/json
       description: save contact
       parameters:
-        - description: user id
+        - description: contact id
           in: path
           name: id
           required: true
           type: integer
-        - description: contact id to save
-          in: body
-          name: account
-          required: true
-          schema:
-            $ref: '#/definitions/transport.SaveContactRequest'
       produces:
         - application/json
       responses:
@@ -447,7 +439,7 @@ paths:
           name: account
           required: true
           schema:
-            $ref: '#/definitions/transport.DeleteSavedContactRequest'
+            $ref: '#/definitions/internal_handler.DeleteSavedContactRequest'
       produces:
         - application/json
       responses:
@@ -474,7 +466,7 @@ paths:
           name: account
           required: true
           schema:
-            $ref: '#/definitions/transport.UpdateContactVisibilityRequest'
+            $ref: '#/definitions/internal_handler.UpdateContactVisibilityRequest'
       produces:
         - application/json
       responses:
@@ -490,12 +482,6 @@ paths:
       consumes:
         - application/json
       description: get saved contacts
-      parameters:
-        - description: user id
-          in: path
-          name: id
-          required: true
-          type: integer
       produces:
         - application/json
       responses:
@@ -503,7 +489,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/db.Contact'
+              $ref: '#/definitions/touchly_internal_db.Contact'
             type: array
       security:
         - JWT: [ ]
@@ -521,7 +507,7 @@ paths:
           name: login
           required: true
           schema:
-            $ref: '#/definitions/transport.LoginUserRequest'
+            $ref: '#/definitions/internal_handler.LoginUserRequest'
       produces:
         - application/json
       responses:
@@ -545,7 +531,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/db.User'
+            $ref: '#/definitions/User'
       security:
         - JWT: [ ]
       summary: Get user
@@ -562,7 +548,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/db.ContactsPage'
+            $ref: '#/definitions/touchly_internal_db.ContactsPage'
       security:
         - JWT: [ ]
       summary: List my contacts
@@ -579,7 +565,7 @@ paths:
           name: email
           required: true
           schema:
-            $ref: '#/definitions/transport.SendOTPRequest'
+            $ref: '#/definitions/internal_handler.SendOTPRequest'
       produces:
         - application/json
       responses:
@@ -599,7 +585,7 @@ paths:
           name: verify
           required: true
           schema:
-            $ref: '#/definitions/transport.VerifyOTPRequest'
+            $ref: '#/definitions/internal_handler.VerifyOTPRequest'
       produces:
         - application/json
       responses:
@@ -619,7 +605,7 @@ paths:
           name: password
           required: true
           schema:
-            $ref: '#/definitions/transport.SetPasswordRequest'
+            $ref: '#/definitions/internal_handler.SetPasswordRequest'
       produces:
         - application/json
       responses:
@@ -640,7 +626,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/db.Tag'
+              $ref: '#/definitions/touchly_internal_db.Tag'
             type: array
       summary: List tags
       tags:
@@ -655,14 +641,14 @@ paths:
           name: tag
           required: true
           schema:
-            $ref: '#/definitions/db.Tag'
+            $ref: '#/definitions/touchly_internal_db.Tag'
       produces:
         - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/db.Tag'
+            $ref: '#/definitions/touchly_internal_db.Tag'
       security:
         - JWT: [ ]
       summary: Create tag
@@ -706,16 +692,10 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.UploadURL'
+            $ref: '#/definitions/UploadURL'
       security:
         - JWT: [ ]
       summary: Get upload URL
       tags:
         - uploads
-securityDefinitions:
-  JWT:
-    description: This API uses JWT Bearer token. You can get one at /auth
-    in: header
-    name: Authorization
-    type: apiKey
 swagger: "2.0"

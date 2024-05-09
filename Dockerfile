@@ -1,26 +1,31 @@
 # syntax=docker/dockerfile:1
 
-# Build the application from source
 FROM golang:1.22 AS build-stage
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
-RUN go mod download
-
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /api ./cmd/api
+COPY go.mod go.sum ./
 
-# Deploy the application binary into a lean image
-FROM gcr.io/distroless/base-debian11
+RUN go mod download
 
-WORKDIR /
+RUN CGO_ENABLED=0 GOOS=linux go build -o /api ./cmd/api/main.go
 
-COPY --from=build-stage /api /api
+FROM alpine:3.19 AS build-release-stage
+
+RUN apk --no-cache add ca-certificates bash curl
+
+WORKDIR /app
+
+COPY --from=build-stage /api /app/api
+
+COPY /scripts/migrations /app/migrations
+
+RUN curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.1/migrate.linux-amd64.tar.gz | tar xvz && \
+    mv migrate /app/migrate \
+    && chmod +x /app/migrate
 
 EXPOSE 8080
 
-USER nonroot:nonroot
-
-ENTRYPOINT ["/app/api"]
+CMD ["/api"]

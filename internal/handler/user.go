@@ -1,7 +1,8 @@
-package transport
+package handler
 
 import (
 	"encoding/json"
+	"github.com/labstack/echo/v4"
 	"net/http"
 )
 
@@ -23,21 +24,19 @@ type LoginUserRequest struct {
 // @Param        login body LoginUserRequest true "login"
 // @Success      200  {object}   map[string]string
 // @Router       /api/login [post]
-func (tr *transport) LoginUserHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) LoginUserHandler(c echo.Context) error {
 	var req LoginUserRequest
 
-	if err := decodeRequest(r, &req); err != nil {
-		WriteError(r, w, err)
-		return
+	if err := c.Bind(&req); err != nil {
+		return err
 	}
 
 	token, err := tr.api.LoginUser(req.Email, req.Password)
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteJSON(w, http.StatusOK, map[string]string{"token": *token})
+	return c.JSON(http.StatusOK, map[string]string{"token": *token})
 }
 
 type VerifyOTPRequest struct {
@@ -54,21 +53,19 @@ type VerifyOTPRequest struct {
 // @Param 	     verify body VerifyOTPRequest true "verify"
 // @Success      200  {object}   nil
 // @Router       /api/otp-verify [post]
-func (tr *transport) VerifyOTPHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) VerifyOTPHandler(c echo.Context) error {
 	var req VerifyOTPRequest
 
-	if err := decodeRequest(r, &req); err != nil {
-		WriteError(r, w, err)
-		return
+	if err := c.Bind(&req); err != nil {
+		return err
 	}
 
 	err := tr.api.VerifyOTP(req.Email, req.OTP)
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteOK(w)
+	return c.NoContent(http.StatusOK)
 }
 
 type SendOTPRequest struct {
@@ -84,21 +81,19 @@ type SendOTPRequest struct {
 // @Param        email body SendOTPRequest true "email"
 // @Success      200  {object}   nil
 // @Router       /api/otp [post]
-func (tr *transport) SendOTPHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) SendOTPHandler(c echo.Context) error {
 	var req SendOTPRequest
 
-	if err := decodeRequest(r, &req); err != nil {
-		WriteError(r, w, err)
-		return
+	if err := c.Bind(&req); err != nil {
+		return err
 	}
 
 	err := tr.api.SendOTP(req.Email)
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteOK(w)
+	return c.NoContent(http.StatusOK)
 }
 
 type SetPasswordRequest struct {
@@ -115,21 +110,19 @@ type SetPasswordRequest struct {
 // @Param        password body SetPasswordRequest true "password"
 // @Success      200  {object}   nil
 // @Router       /api/set-password [post]
-func (tr *transport) SetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) SetPasswordHandler(c echo.Context) error {
 	var req SetPasswordRequest
 
-	if err := decodeRequest(r, &req); err != nil {
-		WriteError(r, w, err)
-		return
+	if err := c.Bind(req); err != nil {
+		return err
 	}
 
 	err := tr.api.SetPassword(req.Email, req.Password)
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteOK(w)
+	return c.NoContent(http.StatusOK)
 }
 
 // GetMeHandler godoc
@@ -138,41 +131,42 @@ func (tr *transport) SetPasswordHandler(w http.ResponseWriter, r *http.Request) 
 // @Tags         users
 // @Accept       json
 // @Produce      json
-// @Success      200  {object}   db.User
+// @Success      200  {object}   User
 // @Security     JWT
 // @Router       /api/me [get]
-func (tr *transport) GetMeHandler(w http.ResponseWriter, r *http.Request) {
-	userID := getUserIDFromRequest(r)
+func (tr *transport) GetMeHandler(c echo.Context) error {
+	userID := getUserID(c)
 
 	user, err := tr.api.GetUserByID(userID)
 
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteJSON(w, http.StatusOK, user)
+	return c.JSON(http.StatusOK, user)
 }
 
 type CreateUserRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
 }
 
-func (tr *transport) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
+func (tr *transport) CreateUserHandler(c echo.Context) error {
 	var req CreateUserRequest
 
-	if err := decodeRequest(r, &req); err != nil {
-		WriteError(r, w, err)
-		return
+	if err := c.Bind(&req); err != nil {
+		return err
+	}
+
+	if err := c.Validate(req); err != nil {
+		return err
 	}
 
 	res, err := tr.admin.CreateUser(req.Email, req.Password)
 
 	if err != nil {
-		WriteError(r, w, err)
-		return
+		return err
 	}
 
-	WriteJSON(w, http.StatusCreated, res)
+	return c.JSON(http.StatusCreated, res)
 }

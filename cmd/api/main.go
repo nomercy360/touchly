@@ -16,10 +16,10 @@ import (
 	"touchly/internal/admin"
 	"touchly/internal/api"
 	"touchly/internal/db"
+	"touchly/internal/handler"
 	"touchly/internal/services"
 	"touchly/internal/storage"
 	"touchly/internal/terrors"
-	"touchly/internal/transport"
 )
 
 type config struct {
@@ -140,10 +140,10 @@ func main() {
 
 	email := services.NewEmailClient(cfg.ResendApiKey)
 
-	apiSvc := api.NewApi(pg, email, s3Client)
+	apiSvc := api.NewApi(pg, email, s3Client, cfg.JWTSecret)
 	adminSvc := admin.NewAdmin(pg)
 
-	tr := transport.New(apiSvc, adminSvc, cfg.JWTSecret)
+	tr := handler.New(apiSvc, adminSvc, cfg.JWTSecret)
 
 	tr.RegisterRoutes(e)
 

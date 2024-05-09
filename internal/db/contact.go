@@ -58,6 +58,7 @@ type ContactListEntry struct {
 	ViewsAmount  int               `db:"views_amount" json:"views_amount"`
 	SavesAmount  int               `db:"saves_amount" json:"saves_amount"`
 	UserID       int64             `db:"user_id" json:"user_id"`
+	IsSaved      bool              `db:"is_saved" json:"is_saved"`
 	Visibility   ContactVisibility `db:"visibility" json:"visibility"`
 }
 
@@ -139,45 +140,57 @@ type Address struct {
 	DeletedAt  *time.Time `db:"deleted_at" json:"deleted_at"`
 }
 
-func (s *storage) ListContacts(
-	userID int64, tagIDs []int, search string, lat float64,
-	lng float64, radius int, page, pageSize int) (ContactsPage, error) {
+type ContactQuery struct {
+	UserID   int64
+	TagIDs   []int
+	Search   string
+	Lat      float64
+	Lng      float64
+	Radius   int
+	Page     int
+	PageSize int
+}
+
+func (s *storage) ListContacts(params ContactQuery) (ContactsPage, error) {
 
 	contactsPage := ContactsPage{
-		Page:     page,
-		PageSize: pageSize,
+		Page:     params.Page,
+		PageSize: params.PageSize,
 	}
 
-	offset := (page - 1) * pageSize
+	offset := (params.Page - 1) * params.PageSize
 
 	var args []interface{}
 	paramIndex := 1
 
 	var whereClauses []string
-	if search != "" {
-		whereClauses = append(whereClauses, "(c.name ILIKE $"+strconv.Itoa(paramIndex)+" OR c.activity_name ILIKE $"+strconv.Itoa(paramIndex)+")")
-		args = append(args, "%"+search+"%")
-		paramIndex++
-	}
 
-	if userID != 0 {
+	if params.UserID != 0 {
 		whereClauses = append(whereClauses, "(c.user_id = $"+strconv.Itoa(paramIndex)+" OR c.visibility = 'public')")
+		args = append(args, params.UserID)
+		paramIndex++
 	} else {
 		whereClauses = append(whereClauses, "c.visibility = 'public'")
 	}
 
-	if len(tagIDs) > 0 {
-		whereClauses = append(whereClauses, "ct.tag_id = ANY($"+strconv.Itoa(paramIndex)+")")
-		args = append(args, pq.Array(tagIDs))
+	if params.Search != "" {
+		whereClauses = append(whereClauses, "(c.name ILIKE $"+strconv.Itoa(paramIndex)+" OR c.activity_name ILIKE $"+strconv.Itoa(paramIndex)+")")
+		args = append(args, "%"+params.Search+"%")
 		paramIndex++
 	}
 
-	if lat != 0 && lng != 0 {
-		point := fmt.Sprintf("ST_SetSRID(ST_Point(%f, %f), 4326)", lng, lat)
+	if len(params.TagIDs) > 0 {
+		whereClauses = append(whereClauses, "ct.tag_id = ANY($"+strconv.Itoa(paramIndex)+")")
+		args = append(args, pq.Array(params.TagIDs))
+		paramIndex++
+	}
+
+	if params.Lat != 0 && params.Lng != 0 {
+		point := fmt.Sprintf("ST_SetSRID(ST_Point(%f, %f), 4326)", params.Lng, params.Lat)
 
 		geoClause := fmt.Sprintf("ST_DWithin(a.location, %s, $%d)", point, paramIndex)
 		whereClauses = append(whereClauses, geoClause)
-		args = append(args, radius*1000) // Convert km to meters
+		args = append(args, params.Radius*1000) // Convert km to meters
 		paramIndex++
 	}
 
@@ -187,11 +200,11 @@ func (s *storage) ListContacts(
 	}
 
 	countQuery := `SELECT COUNT(*) FROM contacts c`
-	if len(tagIDs) > 0 {
+	if len(params.TagIDs) > 0 {
 		countQuery += ` JOIN contact_tags ct ON c.id = ct.contact_id`
 	}
 
-	if lat != 0 && lng != 0 {
+	if params.Lat != 0 && params.Lng != 0 {
 		countQuery += ` JOIN addresses a ON c.id = a.contact_id`
 	}
 
@@ -201,15 +214,27 @@ func (s *storage) ListContacts(
 		return contactsPage, fmt.Errorf("error fetching contacts count: %w", err)
 	}
 
-	selectQuery := `
-        SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount, c.saves_amount, c.user_id, c.visibility
-        FROM contacts c`
+	var selectQuery string
 
-	if len(tagIDs) > 0 {
+	if params.UserID != 0 {
+		selectQuery = `
+			SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount, c.saves_amount, c.user_id, c.visibility, sc.contact_id IS NOT NULL as is_saved
+			FROM contacts c
+			LEFT JOIN saved_contacts sc ON c.id = sc.contact_id AND sc.user_id = $1
+ 		`
+
+	} else {
+		selectQuery = `
+			SELECT c.id, c.name, c.avatar, c.activity_name, c.about, c.views_amount, c.saves_amount, c.user_id, c.visibility
+			FROM contacts c
+		`
+	}
+
+	if len(params.TagIDs) > 0 {
 		selectQuery += ` JOIN contact_tags ct ON c.id = ct.contact_id`
 	}
 
-	if lat != 0 && lng != 0 {
+	if params.Lat != 0 && params.Lng != 0 {
 		selectQuery += ` JOIN addresses a ON c.id = a.contact_id`
 	}
 
@@ -218,7 +243,7 @@ func (s *storage) ListContacts(
         ORDER BY c.created_at DESC
         LIMIT $` + strconv.Itoa(paramIndex) + ` OFFSET $` + strconv.Itoa(paramIndex+1)
 
-	args = append(args, pageSize, offset)
+	args = append(args, params.PageSize, offset)
 
 	rows, err := s.pg.Query(selectQuery, args...)
 	if err != nil {
@@ -231,10 +256,14 @@ func (s *storage) ListContacts(
 
 	for rows.Next() {
 		var c ContactListEntry
-		err = rows.Scan(
-			&c.ID, &c.Name, &c.Avatar, &c.ActivityName, &c.About, &c.ViewsAmount, &c.SavesAmount, &c.UserID,
-			&c.Visibility,
-		)
+		dest := []interface{}{&c.ID, &c.Name, &c.Avatar, &c.ActivityName, &c.About, &c.ViewsAmount, &c.SavesAmount, &c.UserID, &c.Visibility}
+
+		if params.UserID != 0 {
+			dest = append(dest, &c.IsSaved)
+		}
+
+		err = rows.Scan(dest...)
+
 		if err != nil {
 			return contactsPage, fmt.Errorf("scanning contact row: %w", err)
 		}
@@ -499,7 +528,7 @@ func (s *storage) ListSavedContacts(userID int64) ([]Contact, error) {
 	return contacts, nil
 }
 
-func (s *storage) CreateContactAddress(address Address) (*Address, error) {
+func (s *storage) CreateContactAddress(contactID int64, address Address) (*Address, error) {
 	query := `
 		INSERT INTO addresses
 			(external_id, contact_id, label, name, location)
@@ -507,7 +536,11 @@ func (s *storage) CreateContactAddress(address Address) (*Address, error) {
 		RETURNING id
 	`
 
-	err := s.pg.QueryRow(query, address.ExternalID, address.ContactID, address.Label, address.Name, address.Location.Lng, address.Location.Lat).Scan(&address.ID)
+	err := s.pg.QueryRow(
+		query, address.ExternalID, contactID,
+		address.Label, address.Name, address.Location.Lng,
+		address.Location.Lat,
+	).Scan(&address.ID)
 
 	if err != nil {
 		return nil, err

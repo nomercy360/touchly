@@ -42,7 +42,7 @@ type UpdateContactRequest struct {
 	Email            *string    `db:"email" json:"email"`
 	Tags             *[]db.Tag  `db:"-" json:"tags,omitempty"`
 	SocialLinks      *[]db.Link `db:"-" json:"social_links,omitempty"`
-}
+} // @Name UpdateContactRequest
 
 func collectUpdates(contact UpdateContactRequest) map[string]interface{} {
 	updates := map[string]interface{}{}
@@ -113,7 +113,18 @@ func (api *api) ListContacts(userID int64, tagIDs []int, search string, lat floa
 		}
 	}
 
-	contacts, err := api.storage.ListContacts(userID, tagIDs, search, lat, lng, radius, page, pageSize)
+	query := db.ContactQuery{
+		TagIDs:   tagIDs,
+		Search:   search,
+		Lat:      lat,
+		Lng:      lng,
+		Radius:   radius,
+		Page:     page,
+		PageSize: pageSize,
+		UserID:   userID,
+	}
+
+	contacts, err := api.storage.ListContacts(query)
 
 	if err != nil {
 		return contacts, terrors.InternalServerError(err, "failed to list contacts")
@@ -162,12 +173,8 @@ func (api *api) ListSavedContacts(userID int64) ([]db.Contact, error) {
 	return contacts, nil
 }
 
-func (api *api) CreateContactAddress(userID int64, address db.Address) (*db.Address, error) {
-	if address.ContactID == 0 {
-		return nil, terrors.InvalidRequest(nil, "contact id is required")
-	}
-
-	contact, err := api.storage.GetContact(userID, address.ContactID)
+func (api *api) CreateContactAddress(userID, contactID int64, address db.Address) (*db.Address, error) {
+	contact, err := api.storage.GetContact(userID, contactID)
 
 	if err != nil {
 		if db.IsNoRowsError(err) {
@@ -181,7 +188,7 @@ func (api *api) CreateContactAddress(userID int64, address db.Address) (*db.Addr
 		return nil, terrors.Forbidden(nil, "contact does not belong to user")
 	}
 
-	res, err := api.storage.CreateContactAddress(address)
+	res, err := api.storage.CreateContactAddress(contactID, address)
 
 	if err != nil {
 		return nil, terrors.InternalServerError(err, "failed to create contact address")

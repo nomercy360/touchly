@@ -80,7 +80,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/db.ContactsPage"
+                            "$ref": "#/definitions/touchly_internal_db.ContactsPage"
                         }
                     }
                 }
@@ -109,7 +109,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/db.Contact"
+                            "$ref": "#/definitions/touchly_internal_db.Contact"
                         }
                     }
                 ],
@@ -117,7 +117,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/db.Contact"
+                            "$ref": "#/definitions/touchly_internal_db.Contact"
                         }
                     }
                 }
@@ -141,22 +141,13 @@ const docTemplate = `{
                     "contacts"
                 ],
                 "summary": "List contacts saved by user",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "user id",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/db.Contact"
+                                "$ref": "#/definitions/touchly_internal_db.Contact"
                             }
                         }
                     }
@@ -189,7 +180,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/db.Contact"
+                            "$ref": "#/definitions/touchly_internal_db.Contact"
                         }
                     }
                 }
@@ -225,7 +216,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/api.UpdateContactRequest"
+                            "$ref": "#/definitions/UpdateContactRequest"
                         }
                     }
                 ],
@@ -300,7 +291,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/db.Address"
+                            "$ref": "#/definitions/touchly_internal_db.Address"
                         }
                     }
                 ],
@@ -308,7 +299,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/db.Address"
+                            "$ref": "#/definitions/touchly_internal_db.Address"
                         }
                     }
                 }
@@ -335,19 +326,10 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "user id",
+                        "description": "contact id",
                         "name": "id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "description": "contact id to save",
-                        "name": "account",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/transport.SaveContactRequest"
-                        }
                     }
                 ],
                 "responses": {
@@ -389,7 +371,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/transport.DeleteSavedContactRequest"
+                            "$ref": "#/definitions/internal_handler.DeleteSavedContactRequest"
                         }
                     }
                 ],
@@ -432,7 +414,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/transport.UpdateContactVisibilityRequest"
+                            "$ref": "#/definitions/internal_handler.UpdateContactVisibilityRequest"
                         }
                     }
                 ],
@@ -463,7 +445,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/transport.LoginUserRequest"
+                            "$ref": "#/definitions/internal_handler.LoginUserRequest"
                         }
                     }
                 ],
@@ -502,7 +484,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/db.User"
+                            "$ref": "#/definitions/User"
                         }
                     }
                 }
@@ -530,7 +512,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/db.ContactsPage"
+                            "$ref": "#/definitions/touchly_internal_db.ContactsPage"
                         }
                     }
                 }
@@ -556,7 +538,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/transport.SendOTPRequest"
+                            "$ref": "#/definitions/internal_handler.SendOTPRequest"
                         }
                     }
                 ],
@@ -587,7 +569,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/transport.VerifyOTPRequest"
+                            "$ref": "#/definitions/internal_handler.VerifyOTPRequest"
                         }
                     }
                 ],
@@ -618,7 +600,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/transport.SetPasswordRequest"
+                            "$ref": "#/definitions/internal_handler.SetPasswordRequest"
                         }
                     }
                 ],
@@ -648,7 +630,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/db.Tag"
+                                "$ref": "#/definitions/touchly_internal_db.Tag"
                             }
                         }
                     }
@@ -678,7 +660,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/db.Tag"
+                            "$ref": "#/definitions/touchly_internal_db.Tag"
                         }
                     }
                 ],
@@ -686,7 +668,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/db.Tag"
+                            "$ref": "#/definitions/touchly_internal_db.Tag"
                         }
                     }
                 }
@@ -757,7 +739,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.UploadURL"
+                            "$ref": "#/definitions/UploadURL"
                         }
                     }
                 }
@@ -765,7 +747,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "api.UpdateContactRequest": {
+        "UpdateContactRequest": {
             "type": "object",
             "properties": {
                 "about": {
@@ -795,13 +777,13 @@ const docTemplate = `{
                 "social_links": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/db.Link"
+                        "$ref": "#/definitions/touchly_internal_db.Link"
                     }
                 },
                 "tags": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/db.Tag"
+                        "$ref": "#/definitions/touchly_internal_db.Tag"
                     }
                 },
                 "website": {
@@ -809,7 +791,7 @@ const docTemplate = `{
                 }
             }
         },
-        "api.UploadURL": {
+        "UploadURL": {
             "type": "object",
             "properties": {
                 "url": {
@@ -817,217 +799,7 @@ const docTemplate = `{
                 }
             }
         },
-        "db.Address": {
-            "type": "object",
-            "properties": {
-                "contact_id": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "deleted_at": {
-                    "type": "string"
-                },
-                "external_id": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "label": {
-                    "type": "string"
-                },
-                "location": {
-                    "$ref": "#/definitions/db.Point"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "db.Contact": {
-            "type": "object",
-            "properties": {
-                "about": {
-                    "type": "string"
-                },
-                "activity_name": {
-                    "type": "string"
-                },
-                "address": {
-                    "$ref": "#/definitions/db.Address"
-                },
-                "avatar": {
-                    "type": "string"
-                },
-                "country_code": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "deleted_at": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "phone_calling_code": {
-                    "type": "string"
-                },
-                "phone_number": {
-                    "type": "string"
-                },
-                "saves_amount": {
-                    "type": "integer"
-                },
-                "social_links": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/db.Link"
-                    }
-                },
-                "tags": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/db.Tag"
-                    }
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "user_id": {
-                    "type": "integer"
-                },
-                "views_amount": {
-                    "type": "integer"
-                },
-                "visibility": {
-                    "$ref": "#/definitions/db.ContactVisibility"
-                },
-                "website": {
-                    "type": "string"
-                }
-            }
-        },
-        "db.ContactListEntry": {
-            "type": "object",
-            "properties": {
-                "about": {
-                    "type": "string"
-                },
-                "activity_name": {
-                    "type": "string"
-                },
-                "avatar": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "saves_amount": {
-                    "type": "integer"
-                },
-                "user_id": {
-                    "type": "integer"
-                },
-                "views_amount": {
-                    "type": "integer"
-                },
-                "visibility": {
-                    "$ref": "#/definitions/db.ContactVisibility"
-                }
-            }
-        },
-        "db.ContactVisibility": {
-            "type": "string",
-            "enum": [
-                "public",
-                "private",
-                "shared_link"
-            ],
-            "x-enum-varnames": [
-                "ContactVisibilityPublic",
-                "ContactVisibilityPrivate",
-                "ContactVisibilitySharedLink"
-            ]
-        },
-        "db.ContactsPage": {
-            "type": "object",
-            "properties": {
-                "contacts": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/db.ContactListEntry"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "page_size": {
-                    "type": "integer"
-                },
-                "total_count": {
-                    "type": "integer"
-                }
-            }
-        },
-        "db.Link": {
-            "type": "object",
-            "properties": {
-                "contact_id": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "label": {
-                    "type": "string"
-                },
-                "link": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "db.Point": {
-            "type": "object",
-            "properties": {
-                "lat": {
-                    "type": "number"
-                },
-                "lng": {
-                    "type": "number"
-                }
-            }
-        },
-        "db.Tag": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "db.User": {
+        "User": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1050,7 +822,7 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.DeleteSavedContactRequest": {
+        "internal_handler.DeleteSavedContactRequest": {
             "type": "object",
             "properties": {
                 "contact_id": {
@@ -1059,7 +831,7 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.LoginUserRequest": {
+        "internal_handler.LoginUserRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -1070,16 +842,7 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.SaveContactRequest": {
-            "type": "object",
-            "properties": {
-                "contact_id": {
-                    "type": "integer",
-                    "example": 1
-                }
-            }
-        },
-        "transport.SendOTPRequest": {
+        "internal_handler.SendOTPRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -1087,7 +850,7 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.SetPasswordRequest": {
+        "internal_handler.SetPasswordRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -1098,20 +861,20 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.UpdateContactVisibilityRequest": {
+        "internal_handler.UpdateContactVisibilityRequest": {
             "type": "object",
             "properties": {
                 "visibility": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/db.ContactVisibility"
+                            "$ref": "#/definitions/touchly_internal_db.ContactVisibility"
                         }
                     ],
                     "example": "public"
                 }
             }
         },
-        "transport.VerifyOTPRequest": {
+        "internal_handler.VerifyOTPRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -1121,14 +884,219 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
-        }
-    },
-    "securityDefinitions": {
-        "JWT": {
-            "description": "This API uses JWT Bearer token. You can get one at /auth",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
+        },
+        "touchly_internal_db.Address": {
+            "type": "object",
+            "properties": {
+                "contact_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "external_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "location": {
+                    "$ref": "#/definitions/touchly_internal_db.Point"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "touchly_internal_db.Contact": {
+            "type": "object",
+            "properties": {
+                "about": {
+                    "type": "string"
+                },
+                "activity_name": {
+                    "type": "string"
+                },
+                "address": {
+                    "$ref": "#/definitions/touchly_internal_db.Address"
+                },
+                "avatar": {
+                    "type": "string"
+                },
+                "country_code": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone_calling_code": {
+                    "type": "string"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "saves_amount": {
+                    "type": "integer"
+                },
+                "social_links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/touchly_internal_db.Link"
+                    }
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/touchly_internal_db.Tag"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "views_amount": {
+                    "type": "integer"
+                },
+                "visibility": {
+                    "$ref": "#/definitions/touchly_internal_db.ContactVisibility"
+                },
+                "website": {
+                    "type": "string"
+                }
+            }
+        },
+        "touchly_internal_db.ContactListEntry": {
+            "type": "object",
+            "properties": {
+                "about": {
+                    "type": "string"
+                },
+                "activity_name": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_saved": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "saves_amount": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "views_amount": {
+                    "type": "integer"
+                },
+                "visibility": {
+                    "$ref": "#/definitions/touchly_internal_db.ContactVisibility"
+                }
+            }
+        },
+        "touchly_internal_db.ContactVisibility": {
+            "type": "string",
+            "enum": [
+                "public",
+                "private",
+                "shared_link"
+            ],
+            "x-enum-varnames": [
+                "ContactVisibilityPublic",
+                "ContactVisibilityPrivate",
+                "ContactVisibilitySharedLink"
+            ]
+        },
+        "touchly_internal_db.ContactsPage": {
+            "type": "object",
+            "properties": {
+                "contacts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/touchly_internal_db.ContactListEntry"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "touchly_internal_db.Link": {
+            "type": "object",
+            "properties": {
+                "contact_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "link": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "touchly_internal_db.Point": {
+            "type": "object",
+            "properties": {
+                "lat": {
+                    "type": "number"
+                },
+                "lng": {
+                    "type": "number"
+                }
+            }
+        },
+        "touchly_internal_db.Tag": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
         }
     }
 }`
@@ -1136,11 +1104,11 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "",
-	BasePath:         "",
+	Host:             "localhost:8080",
+	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "Touchly API",
-	Description:      "API Documentation for the Touchly Backend",
+	Title:            "Peatch API",
+	Description:      "This is a sample server ClanPlatform server.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

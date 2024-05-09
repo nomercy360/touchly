@@ -8,7 +8,7 @@ import (
 
 type UploadURL struct {
 	URL string `json:"url"`
-}
+} // @Name UploadURL
 
 func (api *api) GetPresignedURL(userID int64, fileName string) (*UploadURL, error) {
 	var res UploadURL

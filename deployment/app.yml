@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    service: touchly
+  name: touchly
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: touchly
+  strategy: { }
+  template:
+    metadata:
+      labels:
+        service: touchly
+    spec:
+      initContainers:
+        - name: db-migrations
+          image: maksim1111/touchly:latest
+          command: [ "/app/migrate", "-path", "/app/migrations", "-database", "$(DATABASE_URL)", "up" ]
+          envFrom:
+            - secretRef:
+                name: touchly-secrets
+      containers:
+        - image: maksim1111/touchly:latest
+          name: touchly
+          imagePullPolicy: Always
+          command: [ "/app/api" ]
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "512Mi"
+          envFrom:
+            - secretRef:
+                name: touchly-secrets
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: touchly
+  name: touchly
+  namespace: default
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    service: touchly
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: touchly
+  namespace: default
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: touchly.mxksim.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: touchly
+                port:
+                  number: 8080

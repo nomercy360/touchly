@@ -10,7 +10,7 @@ type User struct {
 	UpdatedAt       time.Time  `db:"updated_at" json:"updated_at"`
 	EmailVerifiedAt *time.Time `db:"email_verified_at" json:"email_verified_at"`
 	DeleteAt        *time.Time `db:"deleted_at" json:"deleted_at"`
-}
+} //@Name User
 
 type OTP struct {
 	ID        int64     `db:"id"`

@@ -20,7 +20,7 @@ describe('API Test', () => {
             })
             .withHeaders({
                 'Content-Type': 'application/json',
-                'X-Api-Key': 'secret'
+                'Authorization': 'Bearer ' + process.env.ADMIN_TOKEN
             })
             .expectStatus(201)
             .expectJsonSchema({
@@ -432,6 +432,40 @@ describe('API Test', () => {
             .withBearerToken('$S{token}')
             .expectStatus(200)
             .expectJsonLength('contacts', 2);
+    });
+
+    it('POST /api/contacts/:id/save', async () => {
+        await spec()
+            .post(API_URL + '/contacts/$S{firstContactId}/save')
+            .withBearerToken('$S{token}')
+            .expectStatus(201)
+    })
+
+    it('GET /me/saved-contacts', async () => {
+        await spec()
+            .get(API_URL + '/me/saved-contacts')
+            .withBearerToken('$S{token}')
+            .expectStatus(200)
+            .expectJsonLength(1);
+    })
+
+    it('GET /contacts', async () => {
+        await spec()
+            .get(API_URL + '/contacts')
+            .expectStatus(200)
+            .expectJsonSchema({
+                type: 'object',
+                required: ['page', 'page_size', 'total_count', 'contacts']
+            })
+            .expectJsonMatch({
+                page: 1,
+                page_size: 20,
+                total_count: 1,
+                contacts: [
+                    {is_saved: false},
+                ]
+            })
+            .expectJsonLength('contacts', 1);
     });
 
     // it('POST /uploads/get-url', async () => {

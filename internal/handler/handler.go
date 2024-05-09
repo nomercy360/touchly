@@ -1,11 +1,15 @@
-package transport
+package handler
 
 import (
-	"github.com/go-chi/chi/v5"
+	"errors"
+	"github.com/go-playground/validator"
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"net/http"
+	"strconv"
+	"time"
 	api2 "touchly/internal/api"
 	"touchly/internal/db"
 )
@@ -14,6 +18,17 @@ type transport struct {
 	api       api
 	admin     admin
 	jwtSecret string
+}
+
+type CustomValidator struct {
+	validator *validator.Validate
+}
+
+func (cv *CustomValidator) Validate(i interface{}) error {
+	if err := cv.validator.Struct(i); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	return nil
 }
 
 type admin interface {
@@ -35,7 +50,7 @@ type api interface {
 	UpdateContactVisibility(userID, contactID int64, visibility db.ContactVisibility) error
 	DeleteContact(userID, id int64) error
 
-	CreateContactAddress(userID int64, address db.Address) (*db.Address, error)
+	CreateContactAddress(userID, contactID int64, address db.Address) (*db.Address, error)
 
 	ListTags() ([]db.Tag, error)
 	CreateTag(tag db.Tag) (*db.Tag, error)
@@ -61,15 +76,37 @@ func (tr *transport) HealthCheckHandler(c echo.Context) error {
 }
 
 func (tr *transport) RegisterRoutes(e *echo.Echo) {
+	e.Validator = &CustomValidator{validator: validator.New()}
+
 	e.GET("/health", tr.HealthCheckHandler)
 
 	a := e.Group("/api")
 
 	config := echojwt.Config{
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
-			return new(svc.JWTClaims)
+			return new(api2.JWTClaims)
 		},
-		SigningKey: []byte("secret"),
+		SigningKey:             []byte(tr.jwtSecret),
+		ContinueOnIgnoredError: true,
+		ErrorHandler: func(c echo.Context, err error) error {
+			var extErr *echojwt.TokenExtractionError
+			if !errors.As(err, &extErr) {
+				return echo.NewHTTPError(http.StatusUnauthorized, "auth is invalid")
+			}
+
+			claims := &api2.JWTClaims{
+				RegisteredClaims: jwt.RegisteredClaims{
+					ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour * 30)),
+				},
+				UserID: 0,
+			}
+
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+			c.Set("user", token)
+
+			return nil
+		},
 	}
 
 	a.Use(echojwt.WithConfig(config))
@@ -81,73 +118,34 @@ func (tr *transport) RegisterRoutes(e *echo.Echo) {
 	a.GET("/tags", tr.ListTagsHandler)
 	a.POST("/contacts", tr.CreateContactHandler)
 	a.GET("/contacts", tr.ListContactsHandler)
-	a.GET("/contacts/{id}", tr.GetContactHandler)
-	a.PUT("/contacts/{id}", tr.UpdateContactHandler)
-	a.PUT("/contacts/{id}/visibility", tr.UpdateContactVisibilityHandler)
-	a.POST("/contacts/{id}/address", tr.CreateContactAddressHandler)
+	a.GET("/contacts/:id", tr.GetContactHandler)
+	a.PUT("/contacts/:id", tr.UpdateContactHandler)
+	a.PUT("/contacts/:id/visibility", tr.UpdateContactVisibilityHandler)
+	a.POST("/contacts/:id/address", tr.CreateContactAddressHandler)
 	a.GET("/me", tr.GetMeHandler)
-	a.POST("/contacts/{id}/save", tr.SaveContactHandler)
-	a.DELETE("/contacts/{id}/save", tr.DeleteSavedContactHandler)
-	a.GET("/contacts/saved", tr.ListSavedContactsHandler)
+	a.GET("/me/contacts", tr.ListMyContactsHandler)
+	a.GET("/me/saved-contacts", tr.ListSavedContactsHandler)
+	a.POST("/contacts/:id/save", tr.SaveContactHandler)
+	a.DELETE("/contacts/:id/save", tr.DeleteSavedContactHandler)
 	a.POST("/tags", tr.CreateTagHandler)
-	a.DELETE("/tags/{id}", tr.DeleteTagHandler)
+	a.DELETE("/tags/:id", tr.DeleteTagHandler)
 	a.POST("/uploads/get-url", tr.GetUploadURLHandler)
 
 	adm := e.Group("/admin")
-	adm.Use(WithAdminAuth("secret"))
+	adm.Use(middleware.KeyAuth(tr.AdminKeyValidator))
 
 	adm.POST("/users", tr.CreateUserHandler)
-
-	// e.Mount("/admin", AdminRoutes(tr))
 }
 
-func ApiRoutes(tr *transport) http.Handler {
-	r := chi.NewRouter()
-
-	r.Post("/login", tr.LoginUserHandler)
-	r.Post("/otp", tr.SendOTPHandler)
-	r.Post("/otp-verify", tr.VerifyOTPHandler)
-	r.Post("/set-password", tr.SetPasswordHandler)
-
-	r.Get("/tags", tr.ListTagsHandler)
-
-	r.Group(func(r chi.Router) {
-		r.Use(WithAuth("secret", true))
-
-		r.Get("/me", tr.GetMeHandler)
-		r.Post("/contacts", tr.CreateContactHandler)
-		r.Get("/me/contacts", tr.ListMyContactsHandler)
-
-		r.Post("/tags", tr.CreateTagHandler)
-		r.Delete("/tags/{id}", tr.DeleteTagHandler)
-
-		r.Get("/contacts/saved", tr.ListSavedContactsHandler)
-		r.Post("/contacts/{id}/save", tr.SaveContactHandler)
-		r.Delete("/contacts/{id}/save", tr.DeleteSavedContactHandler)
-
-		r.Post("/contacts/{id}/address", tr.CreateContactAddressHandler)
-		r.Put("/contacts/{id}", tr.UpdateContactHandler)
-		r.Put("/contacts/{id}/visibility", tr.UpdateContactVisibilityHandler)
-
-		r.Post("/uploads/get-url", tr.GetUploadURLHandler)
-	})
-
-	r.Group(func(r chi.Router) {
-		r.Use(WithAuth("secret", false))
-
-		r.Get("/contacts", tr.ListContactsHandler)
-		r.Get("/contacts/{id}", tr.GetContactHandler)
-	})
-
-	return r
+func (tr *transport) AdminKeyValidator(key string, c echo.Context) (bool, error) {
+	switch key {
+	case tr.jwtSecret:
+		return true, nil
+	default:
+		return false, nil
+	}
 }
 
-func AdminRoutes(tr *transport) http.Handler {
-	r := chi.NewRouter()
-
-	r.Use(WithAdminAuth("secret"))
-
-	r.Post("/users", tr.CreateUserHandler)
-
-	return r
+func getID(c echo.Context) (int64, error) {
+	return strconv.ParseInt(c.Param("id"), 10, 64)
 }
